@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkout — RN Sports Hub</title>
+  <meta name="description" content="Complete your order at RN Sports Hub. Secure UPI payment and fast India-wide delivery." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="assets/css/checkout.css" />
+</head>
+<body class="checkout-page">
+
+
+<!-- ════════════════════════════════════════════════════════════
+     NAVBAR
+════════════════════════════════════════════════════════════ -->
+<nav id="navbar" class="scrolled">
+  <div class="nav-container">
+    <a href="index.html" class="nav-logo">
+      <img src="assets/images/logo_origional.jpeg" alt="RN Sports Hub Logo" class="nav-icon">
+      <div class="logo-text">
+        <span class="brand">RN SPORTS HUB</span>
+        <span class="sub">Football Store</span>
+      </div>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html" class="nav-link">Home</a></li>
+      <li><a href="shop.html" class="nav-link">Shop</a></li>
+      <li><a href="about.html" class="nav-link">About</a></li>
+      <li><a href="contact.html" class="nav-link">Contact</a></li>
+    </ul>
+    <div class="nav-icons">
+      <button class="nav-icon-btn" onclick="openCartSidebar()" aria-label="Cart">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <path d="M16 10a4 4 0 01-8 0"/>
+        </svg>
+        <span class="cart-count">0</span>
+      </button>
+      <button class="nav-icon-btn" id="menu-toggle" aria-label="Menu">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile Menu -->
+<div id="mobile-menu">
+  <div class="mobile-menu-header">
+    <a href="index.html" class="nav-logo">
+      <img src="assets/images/logo_origional.jpeg" alt="RN Sports Hub Logo" class="nav-icon">
+      <div class="logo-text">
+        <span class="brand">RN SPORTS HUB</span>
+        <span class="sub">Football Store</span>
+      </div>
+    </a>
+    <button class="nav-icon-btn" id="menu-close">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <ul class="mobile-nav-links">
+    <li><a href="index.html" class="mobile-nav-link">Home</a></li>
+    <li><a href="shop.html" class="mobile-nav-link">Shop</a></li>
+    <li><a href="about.html" class="mobile-nav-link">About</a></li>
+    <li><a href="contact.html" class="mobile-nav-link">Contact</a></li>
+  </ul>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     CHECKOUT HEADER + STEP INDICATOR
+════════════════════════════════════════════════════════════ -->
+<div class="checkout-header">
+  <div class="container">
+    <div class="checkout-breadcrumb">
+      <a href="index.html">Home</a><span>/</span>
+      <a href="shop.html">Shop</a><span>/</span>
+      <span class="bc-active">Checkout</span>
+    </div>
+    <h1 class="checkout-page-title">CHECKOUT</h1>
+    <!-- Step Indicator: 3 steps like PSJH -->
+    <div class="csi-wrap">
+      <div class="csi-step active" id="csi-1">
+        <div class="csi-dot">1</div>
+        <span class="csi-label">Address</span>
+      </div>
+      <div class="csi-line" id="csi-line-1"></div>
+      <div class="csi-step" id="csi-2">
+        <div class="csi-dot">2</div>
+        <span class="csi-label">Payment</span>
+      </div>
+      <div class="csi-line" id="csi-line-2"></div>
+      <div class="csi-step" id="csi-3">
+        <div class="csi-dot">✓</div>
+        <span class="csi-label">Confirmed</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ SCREEN 1: ADDRESS + PAYMENT METHOD ════ -->
+<div id="screen-address" class="checkout-screen active">
+  <div class="container">
+
+    <!-- Empty cart state -->
+    <div class="checkout-empty" id="checkout-empty-state" style="display:none">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.5">
+        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+        <line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
+      </svg>
+      <h2>Your Cart is Empty</h2>
+      <p>Add some products before checking out.</p>
+      <a href="shop.html" class="btn-primary" style="margin-top:16px;text-decoration:none;padding:12px 28px;display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;letter-spacing:1.5px;">Browse Shop</a>
+    </div>
+
+    <div class="checkout-grid" id="checkout-form-area">
+
+      <!-- LEFT: Address Form -->
+      <div class="checkout-form-col">
+        <div class="checkout-card">
+          <div class="checkout-card-title">
+            <div class="step-num">1</div>
+            Shipping Details
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="field-name">Full Name *</label>
+              <input class="form-input" id="field-name" type="text" placeholder="Rahul Sharma" autocomplete="name"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="field-phone">Mobile Number *</label>
+              <input class="form-input" id="field-phone" type="tel" placeholder="9876543210" maxlength="10" autocomplete="tel"/>
+            </div>
+            <div class="form-group full">
+              <label class="form-label" for="field-address">Full Address *</label>
+              <input class="form-input" id="field-address" type="text" placeholder="House No., Street, Locality" autocomplete="address-line1"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="field-city">City *</label>
+              <input class="form-input" id="field-city" type="text" placeholder="Kolkata" autocomplete="address-level2"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="field-pincode">Pincode *</label>
+              <div style="position:relative">
+                <input class="form-input" id="field-pincode" type="text" placeholder="700001" maxlength="6" autocomplete="postal-code" oninput="autoDetectPincode(this.value)"/>
+                <span id="pin-loading">📍</span>
+              </div>
+              <div id="pin-error">Invalid PIN code — please check</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="field-state">State *</label>
+              <select class="form-select" id="field-state">
+                <option value="">Select State</option>
+                <option>Andhra Pradesh</option><option>Assam</option><option>Bihar</option>
+                <option>Chhattisgarh</option><option>Delhi</option><option>Goa</option>
+                <option>Gujarat</option><option>Haryana</option><option>Himachal Pradesh</option>
+                <option>Jharkhand</option><option>Karnataka</option><option>Kerala</option>
+                <option>Madhya Pradesh</option><option>Maharashtra</option><option>Manipur</option>
+                <option>Meghalaya</option><option>Mizoram</option><option>Nagaland</option>
+                <option>Odisha</option><option>Punjab</option><option>Rajasthan</option>
+                <option>Sikkim</option><option>Tamil Nadu</option><option>Telangana</option>
+                <option>Tripura</option><option>Uttar Pradesh</option><option>Uttarakhand</option>
+                <option selected>West Bengal</option><option>Jammu &amp; Kashmir</option>
+                <option>Ladakh</option><option>Chandigarh</option><option>Puducherry</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label class="form-label" for="field-notes">Order Notes (Optional)</label>
+              <textarea class="form-textarea" id="field-notes" placeholder="Custom jersey number, delivery instructions…"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment Method Selection -->
+        <div class="checkout-card" style="margin-top:20px">
+          <div class="checkout-card-title">
+            <div class="step-num">2</div>
+            Payment Method
+          </div>
+          <div class="payment-methods">
+            <div class="payment-method-card selected" data-method="upi" onclick="selectPayment('upi')">
+              <div class="payment-radio"><div class="payment-radio-dot"></div></div>
+              <div class="payment-method-icon">📱</div>
+              <div class="payment-method-info">
+                <div class="payment-method-name">UPI / GPay / PhonePe / Paytm</div>
+                <div class="payment-method-sub">Pay via UPI and upload screenshot</div>
+              </div>
+            </div>
+            <div class="payment-method-card" data-method="cod" onclick="selectPayment('cod')">
+              <div class="payment-radio"><div class="payment-radio-dot"></div></div>
+              <div class="payment-method-icon">💵</div>
+              <div class="payment-method-info">
+                <div class="payment-method-name">Cash on Delivery (COD)</div>
+                <div class="payment-method-sub">Pay cash on arrival · ₹200 advance required to confirm</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-place-order" onclick="placeOrder()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Place Order →
+        </button>
+      </div>
+
+      <!-- RIGHT: Order Summary -->
+      <div class="order-summary-col">
+        <div class="order-summary-card">
+          <div class="summary-header">
+            <span>Order Summary</span>
+            <span class="summary-item-count" id="summary-item-count">0 items</span>
+          </div>
+          <div class="summary-items" id="summary-items-list"></div>
+
+          <!-- Coupon -->
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+            <div class="coupon-row">
+              <input class="coupon-input" type="text" id="coupon-input" placeholder="COUPON CODE"/>
+              <button class="coupon-apply-btn" id="coupon-apply-btn" type="button" onclick="applyCoupon()">Apply</button>
+            </div>
+            <div class="coupon-status" id="coupon-status"></div>
+          </div>
+
+          <div class="summary-totals">
+            <div class="total-row">
+              <span class="label">Subtotal</span>
+              <span class="value" id="summary-subtotal">₹0</span>
+            </div>
+            <div class="total-row" id="co-discount-row" style="display:none">
+              <span class="label" style="color:#22c55e">Discount</span>
+              <span class="value" id="co-discount" style="color:#22c55e">-₹0</span>
+            </div>
+            <div class="total-row shipping">
+              <span class="label">Shipping</span>
+              <span class="value" id="summary-shipping">Included</span>
+            </div>
+            <div class="total-row" id="cod-fee-row" style="display:none">
+              <span class="label" style="color:#fbbf24">COD Advance</span>
+              <span class="value" id="cod-fee-val" style="color:#fbbf24">₹200</span>
+            </div>
+            <div class="total-row grand">
+              <span class="label">Total</span>
+              <span class="value" id="summary-grand">₹0</span>
+            </div>
+          </div>
+          <div class="summary-secure">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            Secure &amp; trusted checkout
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ SCREEN 2: PAYMENT (exact PSJH flow) ════ -->
+<div id="screen-payment" class="checkout-screen" style="display:none">
+  <div class="container">
+    <div class="psjh-payment-wrap">
+
+      <div class="success-icon-ring">📱</div>
+      <h2 class="success-title">PAY NOW</h2>
+      <div class="success-status blue">Step 2 of 3 — Complete Payment</div>
+
+      <!-- Order summary box -->
+      <div class="success-order-box">
+        <div class="success-order-row"><span class="sol">Name</span><span class="sov" id="s-name"></span></div>
+        <div class="success-order-row" id="s-coupon-row" style="display:none">
+          <span class="sol">Coupon</span><span class="sov" id="s-coupon" style="color:#22c55e;font-weight:700"></span>
+        </div>
+        <div class="success-order-row">
+          <span class="sol">Amount to Pay</span>
+          <span class="sov" id="s-amount" style="color:var(--accent);font-family:var(--font-head);font-size:1.5rem;letter-spacing:1px"></span>
+        </div>
+      </div>
+
+      <!-- UPI Block -->
+      <div class="upi-block">
+        <div class="upi-block-label">Choose Payment Method</div>
+
+        <!-- ═══ OPTION 1: UPI App Buttons (4 buttons) ═══ -->
+        <div class="upi-option-card upi-option-recommended">
+          <div class="upi-option-header">
+            <span class="upi-recommended-badge">⭐ Recommended</span>
+            <span class="upi-option-sublabel">Option 1 · Tap to open UPI app directly</span>
+          </div>
+
+          <!-- 4 UPI app buttons -->
+          <div class="upi-app-grid">
+            <!-- GPay -->
+            <a id="gpay-btn" href="#" onclick="handleUpiAppClick(event,'gpay')"
+              ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform=''"
+              class="upi-app-btn upi-gpay">
+              <img src="assets/images/Google_Pay_Logo.svg.png" alt="Google pay" onerror="this.style.display='none'"/>
+              <span>GPay</span>
+            </a>
+            <!-- PhonePe -->
+            <a id="phonepe-btn" href="#" onclick="handleUpiAppClick(event,'phonepe')"
+              ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform=''"
+              class="upi-app-btn upi-phonepe">
+              <img src="assets/images/PhonePe-Logo.wine.png" alt="PhonePe" onerror="this.style.display='none'"/>
+              <span>PhonePe</span>
+            </a>
+            <!-- Paytm -->
+            <a id="paytm-btn" href="#" onclick="handleUpiAppClick(event,'paytm')"
+              ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform=''"
+              class="upi-app-btn upi-paytm">
+              <img src="assets/images/paytm-icon.svg" alt="Paytm" onerror="this.style.display='none'"/>
+              <span>Paytm</span>
+            </a>
+            <!-- Any UPI -->
+            <a id="upi-pay-btn" href="#" onclick="handleUpiClick(event)"
+              ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform=''"
+              class="upi-app-btn upi-any">
+              <img src="assets/images/UPI.png" alt="Any UPI" onerror="this.style.display='none'"/>
+              <span>Any UPI</span>
+            </a>
+          </div>
+
+          <p class="upi-auto-hint">Tap any button to auto-open the app with amount pre-filled — just enter PIN &amp; pay</p>
+
+          <!-- No-app fallback -->
+          <div id="upi-fallback-msg" class="upi-fallback" style="display:none">
+            ⚠️ No UPI app found. Use Option 2 or Option 3 below.
+          </div>
+
+          <!-- Switch-back nudge (shown when user returns from UPI app) -->
+          <div id="upi-switchback-nudge" class="upi-switchback" style="display:none">
+            <div class="upi-nudge-top">
+              <span class="upi-nudge-icon">🎉</span>
+              <div>
+                <div class="upi-nudge-title">Payment Done in UPI App?</div>
+                <div class="upi-nudge-sub">You're back! Now upload your screenshot below to confirm your order.</div>
+              </div>
+            </div>
+            <div class="upi-nudge-hint">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+              Scroll down → Upload screenshot → Tap <strong>Upload &amp; Confirm Order</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- DIVIDER -->
+        <div class="upi-or-divider"><span>OR</span></div>
+
+        <!-- ═══ OPTION 2: QR Code ═══ -->
+        <div class="upi-option-card">
+          <div class="upi-option-sublabel" style="margin-bottom:12px">Option 2 · Scan QR Code</div>
+          <div class="upi-qr-section">
+            <div class="upi-qr-box">
+              <!-- Dynamic QR using an SVG placeholder — replace with actual QR image -->
+              <div class="upi-qr-placeholder">
+                <img src="assets/images/qr.png" alt="QR Code" style="width:90%;height:90%;object-fit:contain"/>
+                <div style="font-size:10px;color:var(--text-muted);margin-top:6px;text-align:center">Scan with UPI app</div>
+                <div style="font-size:9px;color:var(--accent);font-weight:700;margin-top:2px">Q222702378@ybl</div>
+              </div>
+            </div>
+            <div class="upi-qr-steps">
+              <div class="upi-qr-step">1. Open any UPI app</div>
+              <div class="upi-qr-step">2. Tap "Scan QR" or "Pay"</div>
+              <div class="upi-qr-step">3. Scan the QR code</div>
+              <div class="upi-qr-step">4. Pay amount shown above</div>
+              <div class="upi-qr-step">5. Take screenshot &amp; upload below</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DIVIDER -->
+        <div class="upi-or-divider"><span>OR</span></div>
+
+        <!-- ═══ OPTION 3: Manual UPI ID ═══ -->
+        <div class="upi-option-card">
+          <div class="upi-option-sublabel" style="margin-bottom:10px">Option 3 · Copy UPI ID &amp; Pay Manually</div>
+          <div class="upi-id-row">
+            <div>
+              <div class="upi-id-label">UPI ID / Mobile Number</div>
+              <div class="upi-id-value">Q222702378@ybl</div>
+              <div class="upi-mobile-num">Mobile: 7439001021</div>
+            </div>
+            <button class="upi-copy-btn" id="copy-upi-btn" onclick="copyUPI()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+              </svg>
+              Copy UPI
+            </button>
+          </div>
+          <div class="upi-apps-supported">GPay · PhonePe · Paytm · BHIM · Any UPI App</div>
+        </div>
+
+        <!-- Payment Instructions -->
+        <div class="payment-instructions-box">
+          <div class="pi-title">📋 How to Complete Payment</div>
+          <div class="pi-step"><div class="pi-num">1</div><div>Pay exact amount <strong id="pi-amount" style="color:var(--accent)"></strong> via any option above</div></div>
+          <div class="pi-step"><div class="pi-num">2</div><div>Take a screenshot of your payment confirmation</div></div>
+          <div class="pi-step"><div class="pi-num">3</div><div>Tap the WhatsApp button below to notify us, then upload screenshot</div></div>
+        </div>
+
+        <!-- WhatsApp notify BEFORE screenshot (PSJH style) -->
+        <div class="wa-before-upload-box" id="upi-wa-box">
+          <div class="wa-before-title">📲 Send Order Details on WhatsApp</div>
+          <p class="wa-before-sub">After paying, tap to notify us — we'll confirm &amp; process your order faster.</p>
+          <a id="wa-notify-btn-payment" href="#" target="_blank" class="wa-notify-big-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.949-1.413A9.944 9.944 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/>
+            </svg>
+            Notify on WhatsApp →
+          </a>
+        </div>
+
+        <!-- Screenshot Upload -->
+        <div class="screenshot-upload-box" id="upi-screenshot-box">
+          <div class="screenshot-title">📸 Upload Payment Screenshot *</div>
+          <p class="screenshot-sub">Your order is saved only after screenshot is uploaded.</p>
+          <input type="file" id="screenshot-file-input" accept="image/*" class="screenshot-file-input"/>
+          <div id="screenshot-preview-wrap" style="display:none;margin-top:10px">
+            <img id="screenshot-preview-img" src="" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border)"/>
+          </div>
+          <button id="screenshot-upload-btn" class="screenshot-confirm-btn" onclick="uploadAndConfirmOrder()">
+            ☁️ Upload Screenshot &amp; Confirm Order
+          </button>
+          <div id="screenshot-status" class="screenshot-status"></div>
+        </div>
+
+
+      </div><!-- /.upi-block -->
+
+      <!-- COD Advance Payment Box (sibling to .upi-block) -->
+      <div id="cod-confirm-box" class="cod-confirm-box">
+        <!-- COD ADVANCE PAYMENT BOX — same UPI flow as online, but fixed ₹200 -->
+        <div id="cod-confirm-box"  class="cod-confirm-box">
+
+          <div class="cod-confirm-title">💵 COD — Pay ₹200 Advance via UPI</div>
+          <div class="cod-advance-notice">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Pay a <strong>₹200 advance</strong> now via UPI to confirm your COD order. The remaining amount (<span id="cod-remaining-amount"></span>) is collected on delivery. This prevents fraud &amp; guarantees your slot.
+          </div>
+
+          <!-- Advance amount box -->
+          <div class="cod-amount-box">
+            <span class="cod-amount-label">Advance to Pay Now</span>
+            <span class="cod-amount-value">₹200</span>
+          </div>
+
+          <!-- OPTION A: UPI App Buttons (same 4 as online payment) -->
+          <div class="upi-option-block">
+            <div class="upi-option-header">
+              <span class="upi-recommended-badge">⭐ Recommended</span>
+              <span class="upi-option-label">Option A · Tap an App to Pay ₹200</span>
+            </div>
+            <p class="upi-option-sub">Tap any button below — the app opens with ₹200 pre-filled. Just enter your PIN.</p>
+            <div class="upi-app-btns">
+              <a id="cod-gpay-btn" href="#" onclick="handleCodUpiAppClick(event,'gpay')" class="upi-app-btn upi-gpay">
+                <div class="upi-app-live"></div>
+                <img src="assets/images/Google_Pay_Logo.svg.png" alt="GPay" onerror="this.style.display='none'"/>
+                <span class="upi-app-name">Google Pay</span>
+                <span class="upi-app-tap">TAP TO PAY</span>
+              </a>
+              <a id="cod-phonepe-btn" href="#" onclick="handleCodUpiAppClick(event,'phonepe')" class="upi-app-btn upi-phonepe">
+                <div class="upi-app-live"></div>
+                <img src="assets/images/PhonePe-Logo.wine.png" alt="PhonePe" onerror="this.style.display='none'"/>
+                <span class="upi-app-name">PhonePe</span>
+                <span class="upi-app-tap">TAP TO PAY</span>
+              </a>
+              <a id="cod-paytm-btn" href="#" onclick="handleCodUpiAppClick(event,'paytm')" class="upi-app-btn upi-paytm">
+                <div class="upi-app-live"></div>
+                <img src="assets/images/paytm-icon.svg" alt="Paytm" onerror="this.style.display='none'"/>
+                <span class="upi-app-name">Paytm</span>
+                <span class="upi-app-tap">TAP TO PAY</span>
+              </a>
+              <a id="cod-any-btn" href="#" onclick="handleCodUpiClick(event)" class="upi-app-btn upi-any">
+                <div class="upi-app-live"></div>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                <span class="upi-app-name">Any UPI App</span>
+                <span class="upi-app-tap">TAP TO PAY</span>
+              </a>
+            </div>
+            <div id="cod-upi-fallback" class="upi-fallback-msg" style="display:none">
+              ⚠️ No UPI app opened. Use Option B or C below to pay manually.
+            </div>
+            <div id="cod-switchback-nudge" class="upi-switchback-nudge" style="display:none">
+              <span style="font-size:20px">🎉</span>
+              <div>
+                <div style="font-weight:800;font-size:13px;color:#22c55e;text-transform:uppercase;letter-spacing:.06em">Payment done? Upload screenshot below ↓</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:3px">You're back! Now upload your ₹200 payment screenshot to confirm your order.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- OR divider -->
+          <div class="upi-or-divider"><span>OR</span></div>
+
+          <!-- OPTION B: QR Code -->
+          <div class="upi-option-block">
+            <div class="upi-option-label">Option B · Scan QR Code — Pay ₹200</div>
+            <p class="upi-option-sub">Scan with any UPI app. Make sure you pay exactly ₹200.</p>
+            <div class="upi-qr-center">
+              <div class="upi-qr-box">
+                <div style="font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:8px;color:var(--text-muted)">SCAN WITH ANY UPI APP</div>
+                <div style="background:#fff;padding:10px;border-radius:6px;display:inline-block">
+                  <img src="assets/images/qr.png" alt="UPI QR" style="width:130px;height:130px;object-fit:contain"
+                    onerror="this.parentElement.innerHTML='<div style=&quot;width:130px;height:130px;display:flex;align-items:center;justify-content:center;font-size:40px&quot;>📱</div>'"/>
+                </div>
+                <p style="margin-top:8px;font-size:11px;color:var(--text-muted)">Pay <strong style="color:#fbbf24">₹200</strong> to <strong>Q222702378@ybl</strong></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- OR divider -->
+          <div class="upi-or-divider"><span>OR</span></div>
+
+          <!-- OPTION C: Copy UPI ID -->
+          <div class="upi-option-block">
+            <div class="upi-option-label">Option C · Copy UPI ID &amp; Pay ₹200 Manually</div>
+            <p class="upi-option-sub">Open any UPI app, send exactly ₹200 to the UPI ID below.</p>
+            <div class="cod-upi-id-row">
+              <div>
+                <div class="cod-upi-label">UPI ID</div>
+                <div class="cod-upi-value">Q222702378@ybl</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:3px">Mobile: 7439001021</div>
+              </div>
+              <button class="cod-copy-btn" id="cod-copy-upi-btn" onclick="copyCodUPI()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                Copy UPI
+              </button>
+            </div>
+          </div>
+
+          <!-- WhatsApp before screenshot -->
+          <div class="wa-before-upload-box" style="margin-top:20px">
+            <div class="wa-pre-label">📲 Send Order on WhatsApp First</div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.6">Tap below to send your order details to us before uploading the screenshot.</p>
+            <a id="cod-wa-btn" href="#" target="_blank" class="wa-pre-btn">
+              <svg viewBox="0 0 24 24" fill="white" width="18" height="18"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.949-1.413A9.944 9.944 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+              Send Order on WhatsApp
+            </a>
+          </div>
+
+          <!-- Screenshot upload -->
+          <div class="cod-screenshot-section" style="margin-top:16px">
+            <div class="cod-screenshot-label">📸 Upload ₹200 Advance Payment Screenshot *</div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">After paying ₹200, take a screenshot and upload it here to confirm your COD order.</p>
+            <input type="file" id="cod-screenshot-input" accept="image/*" class="co-file-input"
+              onchange="handleCodScreenshotChange(this)"/>
+            <div id="cod-preview-wrap" style="display:none;margin-top:10px">
+              <img id="cod-preview-img" src="" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid var(--border)"/>
+            </div>
+            <button class="screenshot-confirm-btn" id="cod-confirm-btn" onclick="uploadCodAdvanceAndConfirm()" style="margin-top:14px">
+              ☁️ Upload Screenshot &amp; Confirm COD Order
+            </button>
+            <div id="cod-upload-status" style="font-size:11px;color:var(--text-muted);margin-top:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-align:center"></div>
+          </div>
+
+        </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- ════ SCREEN 3: SUCCESS ════ -->
+<div id="screen-success" class="checkout-screen" >
+  <div class="container">
+    <div class="psjh-payment-wrap">
+
+      <div class="success-icon-ring">🎉</div>
+      <h2 class="success-title">ORDER PLACED SUCCESSFULLY!</h2>
+      <div class="success-status green">Status: Paid ✓</div>
+
+      <div class="success-order-box">
+        <div class="success-order-row"><span class="sol">Name</span><span class="sov" id="success-name"></span></div>
+        <div class="success-order-row">
+          <span class="sol">Amount Paid</span>
+          <span class="sov" id="success-amount" style="color:var(--accent);font-family:var(--font-head);font-size:1.5rem;letter-spacing:1px"></span>
+        </div>
+        <div class="success-order-row"><span class="sol">Delivery</span><span class="sov">4–7 Working Days</span></div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:16px 0">
+        <a href="shop.html" style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border:1px solid var(--border);border-radius:10px;color:var(--text-muted);text-decoration:none;font-size:13px;transition:border-color .2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">Continue Shopping</a>
+      </div>
+
+      <!-- WhatsApp notify on success screen too (in case they missed it on payment screen) -->
+      <div class="wa-notify-success-box">
+        <div class="wa-notify-success-title">📲 Notify Us on WhatsApp</div>
+        <p class="wa-notify-success-sub">Your order is saved ✓ — tap below to send us order details so we can confirm and dispatch faster.</p>
+        <a id="wa-notify-btn" href="#" target="_blank" class="wa-notify-big-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.949-1.413A9.944 9.944 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/>
+          </svg>
+          Send Order Details on WhatsApp
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <p style="font-size:11px;color:rgba(255,255,255,.35);text-align:center;margin-top:10px">This sends your order summary to us — your payment is already confirmed ✓</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<footer>
+  <div  style="border-top: 2px solid var(--border); margin-top: 20px; background-color: #1e1d1db6;">
+        <div class="summary-secure">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          <p>Secure &amp; trusted checkout</p>
+        </div>
+  </div>
+</footer>
+
+<!-- Cart Sidebar -->
+<div id="cart-overlay"></div>
+<div id="cart-sidebar">
+  <div class="cart-header">
+    <h2>Your Cart</h2>
+    <button class="cart-close-btn" onclick="closeCartSidebar()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <div id="cart-items-list"></div>
+  <div class="cart-footer">
+    <div class="cart-total-row">
+      <span>Total Amount</span>
+      <span id="cart-total-price">₹0</span>
+    </div>
+    <a href="checkout.html" class="btn-checkout">Proceed to Checkout</a>
+  </div>
+</div>
+
+
+
+<!-- Scripts -->
+<script src="assets/js/products.js"></script>
+<script src="assets/js/cart.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/checkout.js"></script>
+
+
+<script>
+// ── Pincode auto-detect (India Post API) ────────────────────────────────────
+let _pincodeTimer = null;
+function autoDetectPincode(val) {
+  const pin   = val.replace(/\D/g, '');
+  const loadEl = document.getElementById('pin-loading');
+  const errEl  = document.getElementById('pin-error');
+  if (errEl)  errEl.style.display  = 'none';
+  clearTimeout(_pincodeTimer);
+  if (pin.length !== 6) { if (loadEl) loadEl.style.display = 'none'; return; }
+  if (loadEl) loadEl.style.display = 'inline';
+  _pincodeTimer = setTimeout(async () => {
+    try {
+      const res  = await fetch('https://api.postalpincode.in/pincode/' + pin);
+      const data = await res.json();
+      if (loadEl) loadEl.style.display = 'none';
+      if (data[0]?.Status === 'Success' && data[0].PostOffice?.length) {
+        const info    = data[0].PostOffice[0];
+        const cityEl  = document.getElementById('field-city');
+        const stateEl = document.getElementById('field-state');
+        if (cityEl  && !cityEl.value)  cityEl.value  = info.District || info.Name || '';
+        if (stateEl) {
+          const stateName = (info.State || '').toLowerCase();
+          const opts = stateEl.options;
+          for (let i = 0; i < opts.length; i++) {
+            if (opts[i].text.toLowerCase() === stateName || opts[i].text.toLowerCase().includes(stateName)) {
+              stateEl.selectedIndex = i; break;
+            }
+          }
+        }
+        if (typeof showToast === 'function')
+          showToast('📍 ' + (info.District || '') + ', ' + (info.State || '') + ' — auto-filled ✓');
+      } else {
+        if (errEl) errEl.style.display = 'block';
+      }
+    } catch(e) {
+      if (loadEl) loadEl.style.display = 'none';
+    }
+  }, 600);
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shop — RN Sports Hub</title>
+  <meta name="description" content="Browse authentic football jerseys, studs and gear at RN Sports Hub. Filter by category, sort by price." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="assets/css/shop.css" />
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════
+     TICKER TAPE
+════════════════════════════════════════════════════════════ -->
+<div class="ticker-wrap">
+  <div class="ticker-inner">
+    <div id="ticker-content">
+      <span class="ticker-item">⚡ Free Delivery Over ₹1499</span>
+      <span class="ticker-item">🏆 100% Authentic Products</span>
+      <span class="ticker-item">📲 UPI Payment Accepted</span>
+      <span class="ticker-item">🔥 New Season Jerseys — Now Live</span>
+      <span class="ticker-item">⚡ Free Delivery Over ₹1499</span>
+      <span class="ticker-item">🏆 100% Authentic Products</span>
+      <span class="ticker-item">📲 UPI Payment Accepted</span>
+      <span class="ticker-item">🔥 New Season Jerseys — Now Live</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     NAVBAR
+════════════════════════════════════════════════════════════ -->
+<nav id="navbar">
+  <div class="nav-container">
+    <a href="index.html" class="nav-logo">
+      <img src="assets/images/logo_origional.jpeg" alt="RN Sports Hub Logo" class="nav-icon">
+      <div class="logo-text">
+        <span class="brand">RN SPORTS HUB</span>
+        <span class="sub">Football Store</span>
+      </div>
+    </a>
+
+    <ul class="nav-links">
+      <li><a href="index.html" class="nav-link">Home</a></li>
+      <li><a href="shop.html" class="nav-link active">Shop</a></li>
+      <li><a href="about.html" class="nav-link">About</a></li>
+      <li><a href="contact.html" class="nav-link">Contact</a></li>
+    </ul>
+
+    <div class="nav-icons">
+      <button class="nav-icon-btn" id="search-toggle" aria-label="Search">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </button>
+      <button class="nav-icon-btn" onclick="openCartSidebar()" aria-label="Cart">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>
+          <path d="M16 10a4 4 0 01-8 0"/>
+        </svg>
+        <span class="cart-count">0</span>
+      </button>
+      <button class="nav-icon-btn" id="menu-toggle" aria-label="Menu">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+  <div id="search-bar" style="position:relative;">
+    <input type="text" placeholder="Search jerseys, studs, gear…" id="nav-search-input" />
+  </div>
+</nav>
+
+<!-- ════════════════════════════════════════════════════════════
+     MOBILE MENU
+════════════════════════════════════════════════════════════ -->
+<div id="mobile-menu">
+  <div class="mobile-menu-header">
+    <a href="index.html" class="nav-logo">
+      <img src="assets/images/logo_origional.jpeg" alt="RN Sports Hub Logo" class="nav-icon">
+      <div class="logo-text">
+        <span class="brand">RN SPORTS HUB</span>
+        <span class="sub">Football Store</span>
+      </div>
+    </a>
+    <button class="nav-icon-btn" id="menu-close">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <ul class="mobile-nav-links">
+    <li><a href="index.html" class="mobile-nav-link">Home</a></li>
+    <li><a href="shop.html" class="mobile-nav-link">Shop</a></li>
+    <li><a href="about.html" class="mobile-nav-link">About</a></li>
+    <li><a href="contact.html" class="mobile-nav-link">Contact</a></li>
+  </ul>
+  <div class="mobile-menu-footer">
+    <a href="https://www.instagram.com/rn_sportshub/" target="_blank" class="social-btn" aria-label="Instagram">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/>
+        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+      </svg>
+    </a>
+    <a href="https://wa.me/917439001021" target="_blank" class="footer-whatsapp" style="padding:8px 16px; font-size:12px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+        <path d="M11.999 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.949-1.413A9.944 9.944 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/>
+      </svg>
+      WhatsApp
+    </a>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SHOP PAGE HEADER
+════════════════════════════════════════════════════════════ -->
+<div class="shop-page-header">
+  <div class="container">
+    <div class="shop-breadcrumb">
+      <a href="index.html">Home</a>
+      <span>/</span>
+      <span>Shop</span>
+    </div>
+    <div class="shop-header-content">
+      <div>
+        <h1 class="shop-page-title">ALL PRODUCTS</h1>
+        <p class="shop-page-sub">Jerseys · Studs · Gear — everything a footballer needs</p>
+      </div>
+      <div class="shop-header-stats">
+        <div class="shop-stat">
+          <span class="shop-stat-num">150+</span>
+          <span class="shop-stat-label">Products</span>
+        </div>
+        <div class="shop-stat">
+          <span class="shop-stat-num">4</span>
+          <span class="shop-stat-label">Categories</span>
+        </div>
+        <div class="shop-stat">
+          <span class="shop-stat-num">₹799+</span>
+          <span class="shop-stat-label">Starting At</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     STICKY FILTER BAR
+════════════════════════════════════════════════════════════ -->
+<div class="shop-filter-bar" id="shop-filter-bar">
+  <div class="container">
+    <div class="filter-bar-inner">
+
+      <!-- Category Pills -->
+      <div class="shop-categories">
+        <button class="shop-cat-btn active" data-cat="all" onclick="setCategory('all', this)">
+          All
+        </button>
+        <button class="shop-cat-btn" data-cat="jerseys" onclick="setCategory('jerseys', this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.57a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.57a2 2 0 00-1.34-2.23z"/>
+          </svg>
+          Jerseys
+        </button>
+        <button class="shop-cat-btn" data-cat="studs" onclick="setCategory('studs', this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/>
+          </svg>
+          Studs
+        </button>
+        <button class="shop-cat-btn" data-cat="gear" onclick="setCategory('gear', this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+          </svg>
+          Gear
+        </button>
+      </div>
+
+
+      <!-- Brand Breadcrumbs -->
+      <div class="shop-brands" id="shop-brands">
+        <button class="shop-brand-btn active" data-brand="all" onclick="setBrand('all',this)">All Brands</button>
+        <button class="shop-brand-btn" data-brand="adidas" onclick="setBrand('adidas',this)">
+          <img src="assets/images/adidas_logo3.png" alt="Adidas" style="height:18px;object-fit:contain;filter:brightness(0) invert(1);opacity:.7"/>
+          Adidas
+        </button>
+        <button class="shop-brand-btn" data-brand="nike" onclick="setBrand('nike',this)">
+          <img src="assets/images/Logo_NIKE.png" alt="Nike" style="height:16px;object-fit:contain;filter:brightness(0) invert(1);opacity:.7"/>
+          Nike
+        </button>
+        <button class="shop-brand-btn" data-brand="mizuno" onclick="setBrand('mizuno',this)">
+          <img src="assets/images/mizuno.png" alt="Mizuno" style="height:16px;object-fit:contain;filter:brightness(0) invert(1);opacity:.7"/>
+          Mizuno
+        </button>
+        <button class="shop-brand-btn" data-brand="puma" onclick="setBrand('puma',this)">
+          <img src="assets/images/Puma_complete_logo.png" alt="Puma" style="height:16px;object-fit:contain;filter:brightness(0) invert(1);opacity:.7"/>
+          Puma
+        </button>
+      </div>
+
+      <!-- Divider -->
+      <div class="filter-divider"></div>
+
+      <!-- Search -->
+      <div class="shop-search-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          type="text"
+          id="shop-search-input"
+          placeholder="Search products…"
+          autocomplete="off"
+        />
+      </div>
+
+      <!-- Sort + Count -->
+      <div class="filter-right">
+        <span id="results-count" class="results-count">12 products found</span>
+        <div class="sort-wrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="9" y1="18" x2="15" y2="18"/>
+          </svg>
+          <select id="sort-select">
+            <option value="default">Sort: Default</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="name-asc">Name: A–Z</option>
+            <option value="discount">Biggest Discount</option>
+          </select>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Active Filter Tags -->
+    <div id="active-filters" class="active-filters" style="display:none;"></div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     MAIN SHOP CONTENT
+════════════════════════════════════════════════════════════ -->
+<div class="container section-pad" style="padding-top:32px">
+
+  <!-- PSJH-style filter chips row -->
+  <div class="filter-chips-row" id="filter-chips">
+    <button class="filter-chip active" data-filter="all"     onclick="applyFilter('all',this)">All</button>
+    <button class="filter-chip"        data-filter="adidas"  onclick="applyFilter('adidas',this)">
+      <img src="assets/images/adidas_logo3.png" alt="Adidas" style="height:14px;object-fit:contain;filter:brightness(0) invert(1);opacity:.7;vertical-align:middle;margin-right:4px">Adidas</button>
+    <button class="filter-chip"        data-filter="nike"    onclick="applyFilter('nike',this)">
+      <img src="assets/images/Logo_NIKE.png" alt="Nike" style="height:12px;object-fit:contain;filter:brightness(0) invert(1);opacity:.7;vertical-align:middle;margin-right:4px">Nike</button>
+    <button class="filter-chip"        data-filter="mizuno"  onclick="applyFilter('mizuno',this)">
+      <img src="assets/images/mizuno.png" alt="Mizuno" style="height:12px;object-fit:contain;filter:brightness(0) invert(1);opacity:.7;vertical-align:middle;margin-right:4px">Mizuno</button>
+    <button class="filter-chip"        data-filter="puma"    onclick="applyFilter('puma',this)">
+      <img src="assets/images/Puma_complete_logo.png" alt="Puma" style="height:12px;object-fit:contain;filter:brightness(0) invert(1);opacity:.7;vertical-align:middle;margin-right:4px">Puma</button>
+    <button class="filter-chip"        data-filter="jerseys" onclick="applyFilter('jerseys',this)">👕 Jerseys</button>
+    <button class="filter-chip"        data-filter="studs"   onclick="applyFilter('studs',this)">👟 Studs</button>
+    <button class="filter-chip"        data-filter="gear"    onclick="applyFilter('gear',this)">⚽ Gear</button>
+  </div>
+
+  <!-- Active filter tags (Myntra-style pills) -->
+  <div id="active-filter-tags" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:16px;align-items:center"></div>
+
+  <div class="shop-layout">
+
+    <!-- Sidebar Backdrop (mobile) -->
+    <div class="filter-sidebar-backdrop" id="filter-backdrop" onclick="closeMobileFilter()"></div>
+
+    <!-- Sidebar -->
+    <aside class="filter-sidebar" id="filter-sidebar">
+      <div class="filter-sidebar-head">
+        <span class="filter-sidebar-head-title">Filters</span>
+        <button class="filter-clear-all-btn" onclick="clearFilters()">Clear All</button>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-title">Category</div>
+        <div class="filter-options">
+          <label class="filter-option">
+            <input type="radio" name="cat" value="all" checked onchange="applyFromSidebar()">
+            <span class="filter-option-label">All</span>
+            <span class="filter-option-count" id="fc-all">—</span>
+          </label>
+          <label class="filter-option">
+            <input type="radio" name="cat" value="jerseys" onchange="applyFromSidebar()">
+            <span class="filter-option-label">Jerseys</span>
+            <span class="filter-option-count" id="fc-jerseys">—</span>
+          </label>
+          <label class="filter-option">
+            <input type="radio" name="cat" value="studs" onchange="applyFromSidebar()">
+            <span class="filter-option-label">Studs &amp; Shoes</span>
+            <span class="filter-option-count" id="fc-studs">—</span>
+          </label>
+          <label class="filter-option">
+            <input type="radio" name="cat" value="gear" onchange="applyFromSidebar()">
+            <span class="filter-option-label">Accessories</span>
+            <span class="filter-option-count" id="fc-gear">—</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-title">Brand</div>
+        <div class="filter-options">
+          <label class="filter-option">
+            <input type="checkbox" value="nike" onchange="applyFromSidebar()">
+            <span class="filter-option-label">Nike</span>
+          </label>
+          <label class="filter-option">
+            <input type="checkbox" value="adidas" onchange="applyFromSidebar()">
+            <span class="filter-option-label">Adidas</span>
+          </label>
+          <label class="filter-option">
+            <input type="checkbox" value="mizuno" onchange="applyFromSidebar()">
+            <span class="filter-option-label">Mizuno</span>
+          </label>
+          <label class="filter-option">
+            <input type="checkbox" value="jordan" onchange="applyFromSidebar()">
+            <span class="filter-option-label">Jordan</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-title">Price Range</div>
+        <div class="price-range-inputs">
+          <input type="number" id="price-min" class="price-input" placeholder="0" min="0" onchange="applyFromSidebar()" />
+          <input type="number" id="price-max" class="price-input" placeholder="Max ₹ (₹)" min="0" onchange="applyFromSidebar()" />
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-title">Stock</div>
+        <div class="filter-options">
+          <label class="filter-option">
+            <input type="radio" name="stock" value="all" checked onchange="applyFromSidebar()">
+            <span class="filter-option-label">All</span>
+          </label>
+          <label class="filter-option">
+            <input type="radio" name="stock" value="instock" onchange="applyFromSidebar()">
+            <span class="filter-option-label">In Stock Only</span>
+          </label>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Product grid area -->
+    <div>
+      <div class="shop-toolbar">
+        <span id="product-result-count" style="font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)">Loading…</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button id="filter-toggle-btn" class="filter-mobile-toggle" onclick="openMobileFilter()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/></svg>
+            Filters
+          </button>
+          <select class="sort-select" id="sort-select" onchange="applyFromSidebar()">
+            <option value="featured">Featured</option>
+            <option value="price-asc">Price: Low → High</option>
+            <option value="price-desc">Price: High → Low</option>
+            <option value="discount">Biggest Discount</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid-products" id="shop-products-grid"></div>
+
+      <div id="shop-pagination" style="display:none"></div>
+
+      <div id="no-results" style="display:none;text-align:center;padding:80px 20px">
+        <div style="font-size:3rem;margin-bottom:12px">🔍</div>
+        <h3 style="font-family:var(--font-cond);font-size:1.3rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">No Products Found</h3>
+        <p style="color:var(--text-muted);margin-bottom:20px">Try adjusting your filters</p>
+        <button onclick="clearFilters()" class="btn-primary" style="border:none;cursor:pointer;padding:12px 28px;font-size:13px;font-weight:700;letter-spacing:1.5px">Clear Filters</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WhatsApp CTA Strip -->
+<div class="shop-cta-strip">
+  <div class="container">
+    <div class="shop-cta-inner">
+      <div>
+        <p class="shop-cta-label">Can't find what you're looking for?</p>
+        <p class="shop-cta-sub">Chat with us on WhatsApp — we'll help you find the right product.</p>
+      </div>
+      <a href="https://wa.me/917439001021?text=Hi!%20I%20am%20looking%20for%20a%20product%20on%20RN%20Sports%20Hub" target="_blank" class="btn-primary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.999 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.949-1.413A9.944 9.944 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+        Chat on WhatsApp
+      </a>
+    </div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════════════════════ -->
+<footer>
+      <div class="footer-main">
+        <div class="footer-brand">
+          <div class="logo-row">
+            <img src="assets/images/logo_origional.jpeg" alt="RN Sports Hub Logo" class="nav-icon">
+            <div class="logo-text">
+              <span class="brand">RN SPORTS HUB</span>
+              <span class="sub">Football Store</span>
+            </div>
+          </div>
+          <p class="footer-tagline">
+            Your one-stop shop for premium football jerseys, studs and gear.
+            Authentic quality, delivered fast across India.
+          </p>
+          <div class="footer-social">
+            <a
+              href="https://www.instagram.com/rn_sportshub/"
+              target="_blank"
+              class="social-btn"
+              aria-label="Instagram"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="2" y="2" width="20" height="20" rx="5" />
+                <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" />
+                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+              </svg>
+            </a>
+            <a
+              href="https://wa.me/917439001021"
+              target="_blank"
+              class="social-btn"
+              aria-label="WhatsApp"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"
+                />
+                <path
+                  d="M11.999 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.949-1.413A9.944 9.944 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"
+                />
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <h4>Quick Links</h4>
+          <ul class="footer-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="shop.html">Shop All</a></li>
+            <li><a href="shop.html?category=jerseys">Jerseys</a></li>
+            <li><a href="shop.html?category=studs">Studs</a></li>
+            <li><a href="shop.html?category=gear">Gear</a></li>
+            <li><a href="about.html">About Us</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Policies</h4>
+          <ul class="footer-links">
+            <li><a href="shipping-policy.html">Shipping Policy</a></li>
+            <li><a href="return-policy.html">Return Policy</a></li>
+            <li><a href="privacy-policy.html">Privacy Policy</a></li>
+            <li><a href="terms.html">Terms of Service</a></li>
+             
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Contact Us</h4>
+          <div class="footer-contact-item">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+              />
+            </svg>
+            <span>
+            <a href="https://wa.me/917439001021?text=Hi!%20I%20want%20to%20order%20from%20RN%20Sports%20Hub">
+              WhatsApp 
+              <br>
+              +91 7439 001 021</a>
+            </span>
+          </div>
+          <div class="footer-contact-item">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="2" y="2" width="20" height="20" rx="5" />
+              <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z" />
+              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+            </svg>
+            <a href="https://www.instagram.com/rn_sportshub/">@rn_sportshub</a>
+          </div>
+          <div class="footer-contact-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
+            <a href="mailto:rnsportshub@gmail.com">rnsportshub@gmail.com</a>
+          </div>
+
+          <a
+            href="https://wa.me/917439001021"
+            target="_blank"
+            class="footer-whatsapp"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"
+              />
+              <path
+                d="M11.999 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.949-1.413A9.944 9.944 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"
+              />
+            </svg>
+            Chat on WhatsApp
+          </a>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>© 2025 RN Sports Hub. All rights reserved.</p>
+        <div class="footer-bottom-links">
+          <a href="privacy-policy.html">Privacy</a>
+          <a href="terms.html">Terms</a>
+          <a href="return-policy.html">Returns</a>
+        </div>
+      </div>
+    </footer>
+
+<!-- Cart Sidebar -->
+<div id="cart-overlay"></div>
+<div id="cart-sidebar">
+  <div class="cart-header">
+    <h2>Your Cart</h2>
+    <button class="cart-close-btn" onclick="closeCartSidebar()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <div id="cart-items-list"></div>
+  <div class="cart-footer">
+    <div class="cart-total-row">
+      <span>Total Amount</span>
+      <span id="cart-total-price">₹0</span>
+    </div>
+    <a href="checkout.html" class="btn-checkout">Proceed to Checkout</a>
+  </div>
+</div>
+
+
+<!-- Scripts -->
+<script src="assets/js/products.js"></script>
+<script src="assets/js/cart.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/shop.js"></script>
+
+
+<!-- ── Firebase Product Loader (upgrades static products with live Firestore data) ── -->
+<script type="module">
+  // Robust Firebase loader with retry + fallback
+  async function loadFirebaseProducts(retries = 2) {
+    try {
+      const { db }          = await import('./assets/js/firebase.js');
+      const { collection, getDocs, query, orderBy, limit }
+                            = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+      const snap = await getDocs(collection(db, 'products'));
+      if (!snap.empty) {
+        window.PRODUCTS = snap.docs.map(d => {
+          const data = d.data();
+          // Normalise fields: ensure images is array, ensure price is number
+          if (!data.images && data.image) data.images = [data.image];
+          if (!Array.isArray(data.images))  data.images = [];
+          data.price         = Number(data.price)         || 0;
+          data.originalPrice = Number(data.originalPrice) || data.price;
+          data.stock         = Number(data.stock)         ?? 1;
+          return { id: d.id, ...data };
+        });
+        console.log('[Firebase] ✓ Products loaded:', window.PRODUCTS.length);
+        window.dispatchEvent(new CustomEvent('productsLoaded', { detail: { count: window.PRODUCTS.length } }));
+        return;
+      }
+      console.log('[Firebase] Collection empty — using static fallback');
+    } catch(e) {
+      if (retries > 0) {
+        console.warn('[Firebase] Retrying…', e.message);
+        await new Promise(r => setTimeout(r, 1200));
+        return loadFirebaseProducts(retries - 1);
+      }
+      console.warn('[Firebase] Failed after retries — static fallback active:', e.message);
+    }
+  }
+  loadFirebaseProducts();
+</script>
+
+</body>
+</html>
