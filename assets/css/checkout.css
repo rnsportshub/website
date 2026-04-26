@@ -649,7 +649,8 @@
 }
 
 @media (max-width: 600px) {
-  .checkout-header { padding: 90px 0 20px; }
+  .checkout-header { padding: 90px 0 20px; margin-left: 20px ;margin-right: 20px ;margin-bottom: 20px ; }
+  .checkout-card { max-width: 88%; }
   .form-row { grid-template-columns: 1fr; }
   .checkout-steps { overflow-x: auto; padding-bottom: 8px; }
   .step-label { display: none; }
