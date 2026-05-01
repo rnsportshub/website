@@ -19,17 +19,27 @@
 <!-- ════════════════════════════════════════════════════════════
      NAVBAR
 ════════════════════════════════════════════════════════════ -->
-<nav id="navbar" class="scrolled">
+<nav id="navbar" style=" position: sticky;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  padding: 16px 0;
+  transition: all 0.4s ease;
+  background: rgba(10,10,10,0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);">
   <div class="nav-container">
     <a href="index.html" class="nav-logo">
-          <div class="logo-icon">
+      <div class="logo-icon">
             <img src="assets/images/logo_origional.jpeg" alt="RN Sports Hub Logo" class="nav-icon">
           </div>
-          <div class="logo-text">
-            <span class="brand">RN SPORTS HUB</span>
-            <span class="sub">Football Store</span>
-          </div>
-        </a>
+      <div class="logo-text">
+        <span class="brand">RN SPORTS HUB</span>
+        <span class="sub">Football Store</span>
+      </div>
+    </a>
     <ul class="nav-links">
       <li><a href="index.html" class="nav-link">Home</a></li>
       <li><a href="shop.html" class="nav-link">Shop</a></li>
@@ -60,7 +70,9 @@
 <div id="mobile-menu">
   <div class="mobile-menu-header">
     <a href="index.html" class="nav-logo">
-      <img src="assets/images/logo_origional.jpeg" alt="RN Sports Hub Logo" class="nav-icon">
+      <div class="logo-icon">
+            <img src="assets/images/logo_origional.jpeg" alt="RN Sports Hub Logo" class="nav-icon">
+          </div>
       <div class="logo-text">
         <span class="brand">RN SPORTS HUB</span>
         <span class="sub">Football Store</span>
@@ -257,10 +269,6 @@
               <span class="value" id="summary-grand">₹0</span>
             </div>
           </div>
-          <div class="summary-secure">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-            Secure &amp; trusted checkout
-          </div>
         </div>
       </div>
     </div>
@@ -306,28 +314,28 @@
               ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform=''"
               class="upi-app-btn upi-gpay">
               <img src="assets/images/Google_Pay_Logo.svg.png" alt="Google pay" onerror="this.style.display='none'"/>
-              <span>GPay</span>
+              <span class="upi-app-name">GPay</span>
             </a>
             <!-- PhonePe -->
             <a id="phonepe-btn" href="#" onclick="handleUpiAppClick(event,'phonepe')"
               ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform=''"
               class="upi-app-btn upi-phonepe">
               <img src="assets/images/PhonePe-Logo.wine.png" alt="PhonePe" onerror="this.style.display='none'"/>
-              <span>PhonePe</span>
+              <span class="upi-app-name">PhonePe</span>
             </a>
             <!-- Paytm -->
             <a id="paytm-btn" href="#" onclick="handleUpiAppClick(event,'paytm')"
               ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform=''"
               class="upi-app-btn upi-paytm">
               <img src="assets/images/paytm-icon.svg" alt="Paytm" onerror="this.style.display='none'"/>
-              <span>Paytm</span>
+              <span class="upi-app-name">Paytm</span>
             </a>
             <!-- Any UPI -->
             <a id="upi-pay-btn" href="#" onclick="handleUpiClick(event)"
               ontouchstart="this.style.transform='scale(0.96)'" ontouchend="this.style.transform=''"
               class="upi-app-btn upi-any">
               <img src="assets/images/UPI.png" alt="Any UPI" onerror="this.style.display='none'"/>
-              <span>Any UPI</span>
+              <span class="upi-app-name">Any UPI</span>
             </a>
           </div>
 
@@ -435,33 +443,30 @@
           <div id="screenshot-status" class="screenshot-status"></div>
         </div>
 
-
       </div><!-- /.upi-block -->
 
-      <!-- COD Advance Payment Box (sibling to .upi-block) -->
-      <div id="cod-confirm-box" class="cod-confirm-box">
-        <!-- COD ADVANCE PAYMENT BOX — same UPI flow as online, but fixed ₹200 -->
-        <div id="cod-confirm-box"  class="cod-confirm-box">
+      <!-- COD Advance Payment Box — sibling of upi-block, not nested inside it -->
+      <div id="cod-confirm-box" style="display:none" class="cod-confirm-box">
 
-          <div class="cod-confirm-title">💵 COD — Pay ₹200 Advance via UPI</div>
-          <div class="cod-advance-notice">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            Pay a <strong>₹200 advance</strong> now via UPI to confirm your COD order. The remaining amount (<span id="cod-remaining-amount"></span>) is collected on delivery. This prevents fraud &amp; guarantees your slot.
-          </div>
+        <div class="cod-confirm-title">💵 COD — Pay Advance via UPI</div>
+        <div class="cod-advance-notice">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Pay a <strong id="cod-advance-amount">₹200</strong> advance now via UPI to confirm your COD order. The remaining amount (<span id="cod-remaining-amount"></span>) is collected on delivery. This prevents fraud &amp; guarantees your slot.
+        </div>
 
           <!-- Advance amount box -->
           <div class="cod-amount-box">
             <span class="cod-amount-label">Advance to Pay Now</span>
-            <span class="cod-amount-value">₹200</span>
+            <span class="cod-amount-value" id="cod-amount-box-value">₹200</span>
           </div>
 
           <!-- OPTION A: UPI App Buttons (same 4 as online payment) -->
           <div class="upi-option-block">
             <div class="upi-option-header">
               <span class="upi-recommended-badge">⭐ Recommended</span>
-              <span class="upi-option-label">Option A · Tap an App to Pay ₹200</span>
+              <span class="upi-option-label">Option A · Tap an App to Pay Advance</span>
             </div>
-            <p class="upi-option-sub">Tap any button below — the app opens with ₹200 pre-filled. Just enter your PIN.</p>
+            <p class="upi-option-sub">Tap any button below — the app opens with the advance amount pre-filled. Just enter your PIN.</p>
             <div class="upi-app-btns">
               <a id="cod-gpay-btn" href="#" onclick="handleCodUpiAppClick(event,'gpay')" class="upi-app-btn upi-gpay">
                 <div class="upi-app-live"></div>
@@ -495,7 +500,7 @@
               <span style="font-size:20px">🎉</span>
               <div>
                 <div style="font-weight:800;font-size:13px;color:#22c55e;text-transform:uppercase;letter-spacing:.06em">Payment done? Upload screenshot below ↓</div>
-                <div style="font-size:12px;color:var(--text-muted);margin-top:3px">You're back! Now upload your ₹200 payment screenshot to confirm your order.</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:3px">You're back! Now upload your advance payment screenshot to confirm your order.</div>
               </div>
             </div>
           </div>
@@ -505,8 +510,8 @@
 
           <!-- OPTION B: QR Code -->
           <div class="upi-option-block">
-            <div class="upi-option-label">Option B · Scan QR Code — Pay ₹200</div>
-            <p class="upi-option-sub">Scan with any UPI app. Make sure you pay exactly ₹200.</p>
+            <div class="upi-option-label">Option B · Scan QR Code — Pay Advance</div>
+            <p class="upi-option-sub">Scan with any UPI app. Make sure you pay the exact advance amount.</p>
             <div class="upi-qr-center">
               <div class="upi-qr-box">
                 <div style="font-size:10px;font-weight:700;letter-spacing:.06em;margin-bottom:8px;color:var(--text-muted)">SCAN WITH ANY UPI APP</div>
@@ -514,7 +519,7 @@
                   <img src="assets/images/qr.png" alt="UPI QR" style="width:130px;height:130px;object-fit:contain"
                     onerror="this.parentElement.innerHTML='<div style=&quot;width:130px;height:130px;display:flex;align-items:center;justify-content:center;font-size:40px&quot;>📱</div>'"/>
                 </div>
-                <p style="margin-top:8px;font-size:11px;color:var(--text-muted)">Pay <strong style="color:#fbbf24">₹200</strong> to <strong>Q222702378@ybl</strong></p>
+                <p style="margin-top:8px;font-size:11px;color:var(--text-muted)">Pay <strong style="color:#fbbf24" id="cod-qr-amount">₹200</strong> to <strong>Q222702378@ybl</strong></p>
               </div>
             </div>
           </div>
@@ -524,8 +529,8 @@
 
           <!-- OPTION C: Copy UPI ID -->
           <div class="upi-option-block">
-            <div class="upi-option-label">Option C · Copy UPI ID &amp; Pay ₹200 Manually</div>
-            <p class="upi-option-sub">Open any UPI app, send exactly ₹200 to the UPI ID below.</p>
+            <div class="upi-option-label">Option C · Copy UPI ID &amp; Pay Advance Manually</div>
+            <p class="upi-option-sub">Open any UPI app, send the exact advance amount to the UPI ID below.</p>
             <div class="cod-upi-id-row">
               <div>
                 <div class="cod-upi-label">UPI ID</div>
@@ -551,8 +556,8 @@
 
           <!-- Screenshot upload -->
           <div class="cod-screenshot-section" style="margin-top:16px">
-            <div class="cod-screenshot-label">📸 Upload ₹200 Advance Payment Screenshot *</div>
-            <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">After paying ₹200, take a screenshot and upload it here to confirm your COD order.</p>
+            <div class="cod-screenshot-label">📸 Upload Advance Payment Screenshot *</div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">After paying the advance, take a screenshot and upload it here to confirm your COD order.</p>
             <input type="file" id="cod-screenshot-input" accept="image/*" class="co-file-input"
               onchange="handleCodScreenshotChange(this)"/>
             <div id="cod-preview-wrap" style="display:none;margin-top:10px">
@@ -562,16 +567,15 @@
               ☁️ Upload Screenshot &amp; Confirm COD Order
             </button>
             <div id="cod-upload-status" style="font-size:11px;color:var(--text-muted);margin-top:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-align:center"></div>
-          </div>
-
         </div>
+
+      </div>
     </div>
-  </div>
   </div>
 </div>
 
 <!-- ════ SCREEN 3: SUCCESS ════ -->
-<div id="screen-success" class="checkout-screen" >
+<div id="screen-success" class="checkout-screen" style="display:none">
   <div class="container">
     <div class="psjh-payment-wrap">
 
