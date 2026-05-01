@@ -70,22 +70,16 @@ function renderFeaturedProducts() {
   container.innerHTML = getFeaturedProducts().map(renderProductCard).join('');
 }
 
-// ── Firebase upgrade: called by inline module script in each HTML page ─────────
-// Pages that need live Firebase data include this snippet:
+// ── Firebase live sync ────────────────────────────────────────────────────────
+// Each HTML page (index, shop, product) includes an inline <script type="module">
+// that loads all products from Firestore on page load.
 //
-//   <script type="module">
-//     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-//     import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-//     import { firebaseConfig } from "./assets/js/firebase-config.js";
-//     const app = initializeApp(firebaseConfig);
-//     const db  = getFirestore(app);
-//     try {
-//       const snap = await getDocs(collection(db, "products"));
-//       if (!snap.empty) {
-//         window.PRODUCTS = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-//         window.dispatchEvent(new Event("productsLoaded"));
-//       }
-//     } catch(e) { console.warn("Firebase products load failed:", e.message); }
-//   </script>
+// Flow:
+//   1. This file sets window.PRODUCTS = static products array immediately (zero delay).
+//   2. The inline module script fetches Firestore, normalises fields, and overwrites
+//      window.PRODUCTS with live data.
+//   3. It fires: window.dispatchEvent(new CustomEvent('productsLoaded'))
+//   4. shop.js and product.js both listen for this event and re-render automatically.
 //
-// shop.js and product.js already listen for window.PRODUCTS and retry loading.
+// Result: page shows static products instantly, then silently upgrades to live data.
+// If Firebase fails, the static fallback stays — no blank screens.

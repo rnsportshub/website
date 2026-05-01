@@ -171,17 +171,28 @@ function renderSummary() {
     return s + ((p ? p.price : item.price || 0) * item.quantity);
   }, 0);
   const discount = calcDiscount(subtotal);
-  const total    = subtotal - discount;
+  const total    = subtotal - discount + SHIPPING_FEE;
 
   if (countEl) countEl.textContent = `${cart.length} item${cart.length !== 1 ? 's' : ''}`;
   if (subEl)   subEl.textContent   = fmt(subtotal);
-  if (shipEl)  shipEl.textContent  = 'Included';
+  if (shipEl)  shipEl.textContent  = fmt(SHIPPING_FEE);
   if (totalEl) totalEl.textContent = fmt(total);
   if (discRow && discVal) {
     discRow.style.display = discount > 0 ? 'flex' : 'none';
     if (discount > 0) discVal.textContent = '-' + fmt(discount);
   }
   return { subtotal, discount, total, cart };
+}
+
+// ── Summary variant: COD selected — grand total shows ADVANCE only ───────────
+// The customer pays the advance now; remainder on delivery.
+function renderSummaryWithCod(advance) {
+  const result = renderSummary();                  // renders subtotal / discount normally
+  if (!result) return;
+  const totalEl  = document.getElementById('summary-grand');
+  const grandLbl = document.getElementById('summary-grand-label'); // optional label el
+  if (totalEl) totalEl.textContent = fmt(advance);
+  if (grandLbl) grandLbl.textContent = 'Advance to Pay Now';
 }
 
 // ── Coupon ───────────────────────────────────────────────────────────────────
@@ -238,6 +249,24 @@ window.selectPayment = function(method) {
   selectedPaymentMethod = method;
   document.querySelectorAll('.payment-method-card').forEach(c =>
     c.classList.toggle('selected', c.dataset.method === method));
+
+  // Show COD advance fee row in order summary
+  const codFeeRow   = document.getElementById('cod-fee-row');
+  const codFeeAmt   = document.getElementById('cod-fee-val');
+  const isCod       = method === 'cod';
+
+  if (codFeeRow) codFeeRow.style.display = isCod ? 'flex' : 'none';
+
+  if (isCod) {
+    const advance = calcCodAdvance();
+    // Update the fee label in the row
+    if (codFeeAmt) codFeeAmt.textContent = fmt(advance);
+    // Refresh full summary so grand total reflects advance
+    renderSummaryWithCod(advance);
+  } else {
+    // Back to UPI — restore normal total
+    renderSummary();
+  }
 };
 
 // ── Step indicator helper ────────────────────────────────────────────────────
@@ -300,13 +329,14 @@ window.placeOrder = function() {
       const p = (typeof getProductById === 'function') ? getProductById(item.id) : null;
       return { name: p?.name || item.name || '', size: item.size || '', qty: item.quantity, price: p?.price || item.price || 0 };
     }),
-    coupon:   _appliedCoupon?.code || null,
-    discount: totals.discount,
-    amount:   totals.total,
-    payment:  selectedPaymentMethod,
-    status:   selectedPaymentMethod === 'cod' ? 'COD_ADVANCE_PENDING' : 'Paid',
-    codAdvancePaid: false,
-    screenshot: null,
+    coupon:           _appliedCoupon?.code || null,
+    discount:         totals.discount,
+    amount:           totals.total,
+    payment:          selectedPaymentMethod,
+    codAdvanceAmount: selectedPaymentMethod === 'cod' ? calcCodAdvance() : 0,
+    status:           selectedPaymentMethod === 'cod' ? 'COD_ADVANCE_PENDING' : 'Paid',
+    codAdvancePaid:   false,
+    screenshot:       null,
   };
   _pendingOrderMeta = { orderId, name, total: totals.total };
 
@@ -316,8 +346,33 @@ window.placeOrder = function() {
   // Populate payment screen order box
   const safeSet = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   safeSet('s-name',   name);
-  safeSet('s-amount', fmt(totals.total));
   safeSet('pi-amount', fmt(totals.total));
+
+  // For COD: show advance amount in the "Amount to Pay" box, not full total
+  const isCodPayment = selectedPaymentMethod === 'cod';
+  if (isCodPayment) {
+    const advance = calcCodAdvance();
+    safeSet('s-amount', fmt(advance));
+    // Also add a label clarifying it's the advance
+    const amtLabel = document.querySelector('#screen-payment .sol');
+    const rows = document.querySelectorAll('#screen-payment .success-order-row');
+    rows.forEach(row => {
+      if (row.querySelector('#s-amount')) {
+        const label = row.querySelector('.sol');
+        if (label) label.textContent = 'Advance to Pay Now';
+      }
+    });
+  } else {
+    safeSet('s-amount', fmt(totals.total));
+    // Reset label for UPI
+    const rows = document.querySelectorAll('#screen-payment .success-order-row');
+    rows.forEach(row => {
+      if (row.querySelector('#s-amount')) {
+        const label = row.querySelector('.sol');
+        if (label) label.textContent = 'Amount to Pay';
+      }
+    });
+  }
 
   // Coupon row on payment screen
   const couponRow = document.getElementById('s-coupon-row');
@@ -364,17 +419,27 @@ window.placeOrder = function() {
 };
 
 function toggleCodMode(isCod) {
-  // cod-confirm-box is now a SIBLING of .upi-block (not inside it)
-  // so hiding .upi-block won't accidentally hide the cod box
+  // Use IDs to target precisely — avoids querySelector matching the COD-internal duplicates
   const upiBlock = document.querySelector('#screen-payment .upi-block');
   const codBox   = document.getElementById('cod-confirm-box');
+  const ssBox    = document.getElementById('upi-screenshot-box');
+  const waBox    = document.getElementById('upi-wa-box');
+  // Also hide/show payment instructions and OR dividers
+  const piBox    = document.querySelector('#screen-payment .payment-instructions');
+  const dividers = document.querySelectorAll('#screen-payment > .psjh-payment-wrap > .upi-or-divider, #screen-payment .upi-block ~ .upi-or-divider');
 
   if (isCod) {
     if (upiBlock) upiBlock.style.display = 'none';
     if (codBox)   codBox.style.display   = 'block';
+    if (ssBox)    ssBox.style.display    = 'none';
+    if (waBox)    waBox.style.display    = 'none';
+    if (piBox)    piBox.style.display    = 'none';
   } else {
     if (upiBlock) upiBlock.style.display = 'block';
     if (codBox)   codBox.style.display   = 'none';
+    if (ssBox)    ssBox.style.display    = 'block';
+    if (waBox)    waBox.style.display    = 'block';
+    if (piBox)    piBox.style.display    = 'block';
   }
 }
 
@@ -429,7 +494,8 @@ window.uploadCodAdvanceAndConfirm = async function() {
   const statusEl   = document.getElementById('cod-upload-status');
   const btn        = document.getElementById('cod-confirm-btn');
   if (!_pendingOrderData) { showToast('Order data lost. Please refresh.', 'error'); return; }
-  if (!fileInput?.files?.length) { showToast('Please upload your ₹200 advance payment screenshot.', 'error'); return; }
+  const advance = _pendingOrderData.codAdvanceAmount || calcCodAdvance();
+  if (!fileInput?.files?.length) { showToast(`Please upload your ${fmt(advance)} advance payment screenshot.`, 'error'); return; }
   btn.disabled = true; btn.textContent = '⏳ Uploading…';
   if (statusEl) { statusEl.textContent = 'Uploading advance screenshot…'; }
   try {
@@ -499,8 +565,20 @@ function buildWAMessage(d) {
 // ── Success screen ───────────────────────────────────────────────────────────
 function showSuccessScreen({ orderId, name, total }) {
   const safeSet = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  safeSet('success-name',   name);
-  safeSet('success-amount', fmt(total));
+  safeSet('success-name', name);
+
+  // For COD show advance paid, not full total
+  const isCod = _pendingOrderData?.payment === 'cod';
+  const advance = _pendingOrderData?.codAdvanceAmount || 0;
+  const successAmtLabel = document.querySelector('#screen-success .sol');
+  const successRows = document.querySelectorAll('#screen-success .success-order-row');
+  successRows.forEach(row => {
+    if (row.querySelector('#success-amount')) {
+      const label = row.querySelector('.sol');
+      if (label) label.textContent = isCod ? 'Advance Paid' : 'Amount Paid';
+    }
+  });
+  safeSet('success-amount', isCod ? fmt(advance) : fmt(total));
 
   // WA notify URL on success screen
   const waMsg = buildWAMessage(_pendingOrderData);
@@ -544,17 +622,35 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-window.addEventListener('productsLoaded', () => { updateSummary && updateSummary(); });
+window.addEventListener('productsLoaded', () => { renderSummary && renderSummary(); });
 
-// ── COD ADVANCE UPI BUTTONS (₹200 fixed amount) ──────────────────────────────
-const COD_ADVANCE = 200;
+// ── Shipping fee ─────────────────────────────────────────────────────────────
+const SHIPPING_FEE = 100; // ₹100 flat shipping on every order
+// Jerseys: ₹100 · Studs: ₹500 · Everything else: ₹200
+// Rule: take the HIGHEST advance from all items in cart
+const COD_ADVANCE_MAP = { jerseys: 100, studs: 500 };
+const COD_ADVANCE_DEFAULT = 200;
+
+function calcCodAdvance() {
+  const cart = (typeof getCart === 'function') ? getCart() : [];
+  if (!cart.length) return COD_ADVANCE_DEFAULT;
+  let highest = 0;
+  cart.forEach(item => {
+    const p        = (typeof getProductById === 'function') ? getProductById(item.id) : null;
+    const category = (p?.category || item.category || '').toLowerCase();
+    const advance  = COD_ADVANCE_MAP[category] ?? COD_ADVANCE_DEFAULT;
+    if (advance > highest) highest = advance;
+  });
+  return highest || COD_ADVANCE_DEFAULT;
+}
 
 function setCodUpiButtonHrefs(orderId) {
+  const advance = calcCodAdvance();
   const links = {
-    'cod-gpay-btn':    generateUpiLink(COD_ADVANCE, orderId + '-ADVANCE', 'gpay'),
-    'cod-phonepe-btn': generateUpiLink(COD_ADVANCE, orderId + '-ADVANCE', 'phonepe'),
-    'cod-paytm-btn':   generateUpiLink(COD_ADVANCE, orderId + '-ADVANCE', 'paytm'),
-    'cod-any-btn':     generateUpiLink(COD_ADVANCE, orderId + '-ADVANCE', 'any'),
+    'cod-gpay-btn':    generateUpiLink(advance, orderId + '-ADVANCE', 'gpay'),
+    'cod-phonepe-btn': generateUpiLink(advance, orderId + '-ADVANCE', 'phonepe'),
+    'cod-paytm-btn':   generateUpiLink(advance, orderId + '-ADVANCE', 'paytm'),
+    'cod-any-btn':     generateUpiLink(advance, orderId + '-ADVANCE', 'any'),
   };
   Object.entries(links).forEach(([id, href]) => {
     const el = document.getElementById(id);
@@ -639,12 +735,22 @@ const _origToggleCodMode = toggleCodMode;
 toggleCodMode = function(isCod) {
   _origToggleCodMode(isCod);
   if (isCod && _pendingOrderData) {
+    const advance = calcCodAdvance();
+    // Store advance on order data so it saves correctly
+    _pendingOrderData.codAdvanceAmount = advance;
     // Set COD UPI button hrefs
     setCodUpiButtonHrefs(_pendingOrderData.orderId);
-    // Set remaining amount display
-    const remaining = (_pendingOrderData.amount || 0) - COD_ADVANCE;
+    // Update remaining amount display
+    const remaining = (_pendingOrderData.amount || 0) - advance;
     const remEl = document.getElementById('cod-remaining-amount');
     if (remEl) remEl.textContent = '₹' + Math.max(0, remaining).toLocaleString('en-IN');
+    // Update advance amount in all display elements inside cod-confirm-box
+    const advEl        = document.getElementById('cod-advance-amount');
+    const advBoxVal    = document.getElementById('cod-amount-box-value');
+    const advQrAmt     = document.getElementById('cod-qr-amount');
+    if (advEl)     advEl.textContent     = fmt(advance);
+    if (advBoxVal) advBoxVal.textContent = fmt(advance);
+    if (advQrAmt)  advQrAmt.textContent  = fmt(advance);
     // Set WhatsApp link for COD
     const waMsg = buildWAMessage(_pendingOrderData);
     const waBtn = document.getElementById('cod-wa-btn');
@@ -654,10 +760,10 @@ toggleCodMode = function(isCod) {
     if (fb) fb.style.display = 'none';
     const nudge = document.getElementById('cod-switchback-nudge');
     if (nudge) nudge.style.display = 'none';
-    // Attach cod screenshot change handler
+    // Attach cod screenshot change handler once
     const codInput = document.getElementById('cod-screenshot-input');
     if (codInput && !codInput._handlerAttached) {
-      codInput.addEventListener('change', function() { handleCodScreenshotChange(this); });
+      codInput.addEventListener('change', function() { window.handleCodScreenshotChange(this); });
       codInput._handlerAttached = true;
     }
   }

@@ -64,7 +64,7 @@ function renderProductDetail(p) {
     else if (brand.includes('puma')) { chartSrc = 'assets/images/Mizuno-puma_size_chart.png'; chartAlt = 'Puma Size Chart'; }
     else                               { chartSrc = 'assets/images/nike_size_chart.png';   chartAlt = 'Nike Size Chart'; }
   } else if (isJersey) {
-    chartSrc = 'assets/images/jersey_size_chart.jpg'; chartAlt = 'Jersey Size Chart';
+    chartSrc = 'assets/images/jersey_size_chart.png'; chartAlt = 'Jersey Size Chart';
   }
 
   const sizeLabel = isShoes ? 'UK Size' : 'Size';
@@ -477,19 +477,27 @@ function renderRelatedProducts(p) {
   grid.innerHTML = related.map(x => {
     const imgs = (x.images && x.images.length) ? x.images : [x.image || ''];
     const disc = x.originalPrice > x.price ? Math.round(((x.originalPrice-x.price)/x.originalPrice)*100) : 0;
-    return `<div class="product-card" onclick="window.location='product.html?id=${x.id}'" style="cursor:pointer">
-      <div class="product-image-wrap">
+    const outOfStock = Number(x.stock) === 0;
+    return `<div class="product-card" style="cursor:pointer">
+      <div class="product-image-wrap" onclick="window.location='product.html?id=${x.id}'">
         <img src="${imgs[0]}" alt="${x.name}" loading="lazy" onerror="this.src='https://placehold.co/400x400/111/00ff88?text=RN'">
         ${x.badge?`<span class="product-badge badge-${(x.badge||'').toLowerCase().replace(/\s+/g,'')}">${x.badge}</span>`:''}
         ${disc>0?`<span class="product-discount">-${disc}%</span>`:''}
       </div>
       <div class="product-info">
         <p class="product-category">${(x.brand||'').toUpperCase()}</p>
-        <span class="product-name">${x.name}</span>
+        <span class="product-name" onclick="window.location='product.html?id=${x.id}'">${x.name}</span>
         <div class="product-pricing">
           <span class="product-price">₹${(x.price||0).toLocaleString('en-IN')}</span>
           ${x.originalPrice>x.price?`<span class="product-original">₹${x.originalPrice.toLocaleString('en-IN')}</span>`:''}
         </div>
+        <button
+          class="btn-add-to-cart${outOfStock?' btn-out-of-stock':''}"
+          style="margin-top:10px;width:100%;padding:9px 0;font-size:12px;font-weight:700;letter-spacing:1px;border:none;border-radius:6px;cursor:${outOfStock?'not-allowed':'pointer'};background:${outOfStock?'#333':'var(--accent)'};color:${outOfStock?'#777':'#000'};transition:.2s"
+          onclick="event.stopPropagation(); ${outOfStock ? '' : `addToCart('${x.id}', null); this.textContent='✓ Added'; this.style.background='#22c55e'; setTimeout(()=>{this.textContent='Add to Cart';this.style.background='var(--accent)'},1500)`}"
+          ${outOfStock ? 'disabled' : ''}>
+          ${outOfStock ? 'Out of Stock' : 'Add to Cart'}
+        </button>
       </div>
     </div>`;
   }).join('');

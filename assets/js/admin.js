@@ -5,41 +5,164 @@
 //           Orders, Products, Images, Save/Edit/Delete,
 //           Reviews, Bulk Upload, Coupons, Enquiries, Init
 
-import { db } from './firebase.js';
+import { db, auth } from './firebase.js';
 import { uploadMultipleToCloudinary } from './cloudinary.js';
 import {
   collection, getDocs, addDoc, updateDoc, deleteDoc,
   doc, getDoc, setDoc, serverTimestamp, query, orderBy, where
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import {
+  signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 // ============================================================
-// SECTION 1: AUTH
+// SECTION 1: AUTH — Firebase Authentication
 // ============================================================
-const ADMIN_CREDS = { username: 'user', password: 'admin_01' };
-const STORAGE_KEY = 'rn_admin_logged_in';
+// Admin logs in with email + password via Firebase Auth.
+// No credentials are stored in client-side JS.
+// Firestore rules enforce auth on all write operations.
+// ============================================================
 
-function checkLogin()    { return localStorage.getItem(STORAGE_KEY) === 'true'; }
-function showLoginScreen() { document.getElementById('admin-login-screen').style.display = 'flex'; document.getElementById('admin-app').style.display = 'none'; }
-function showAdminApp()    { document.getElementById('admin-login-screen').style.display = 'none'; document.getElementById('admin-app').style.display = 'flex'; }
+const LOCKOUT_KEY      = 'rn_admin_lockout';
+const ATTEMPT_KEY      = 'rn_admin_attempts';
+const MAX_ATTEMPTS     = 3;
+const LOCKOUT_DURATION = 10 * 60 * 1000; // 10 minutes in ms
 
-window.adminLogin = function() {
-  const u = document.getElementById('login-username')?.value.trim();
-  const p = document.getElementById('login-password')?.value;
+function getRemainingLockout() {
+  const until = parseInt(localStorage.getItem(LOCKOUT_KEY) || '0', 10);
+  const remaining = until - Date.now();
+  return remaining > 0 ? remaining : 0;
+}
+
+function formatLockoutTime(ms) {
+  const mins = Math.ceil(ms / 60000);
+  return `${mins} minute${mins !== 1 ? 's' : ''}`;
+}
+
+function showLoginScreen() {
+  document.getElementById('admin-login-screen').style.display = 'flex';
+  document.getElementById('admin-app').style.display = 'none';
+}
+
+function showAdminApp() {
+  document.getElementById('admin-login-screen').style.display = 'none';
+  document.getElementById('admin-app').style.display = 'flex';
+}
+
+function setLoginError(msg) {
   const err = document.getElementById('login-error');
-  if (u === ADMIN_CREDS.username && p === ADMIN_CREDS.password) {
-    localStorage.setItem(STORAGE_KEY, 'true');
-    if (err) err.style.display = 'none';
-    showAdminApp(); initAdminApp();
-  } else {
-    if (err) { err.textContent = 'Invalid username or password.'; err.style.display = 'block'; }
-    const box = document.getElementById('login-box');
-    if (box) { box.style.animation = 'none'; void box.offsetWidth; box.style.animation = 'loginShake .4s ease'; }
+  if (!err) return;
+  err.textContent = msg;
+  err.style.display = 'block';
+  const box = document.getElementById('login-box');
+  if (box) { box.style.animation = 'none'; void box.offsetWidth; box.style.animation = 'loginShake .4s ease'; }
+}
+
+function clearLoginError() {
+  const err = document.getElementById('login-error');
+  if (err) err.style.display = 'none';
+}
+
+// Wait for DOM before setting up auth listener
+// This prevents showLoginScreen()/showAdminApp() from running before elements exist
+document.addEventListener('DOMContentLoaded', () => {
+
+  // Clear any stale lockout from previous sessions (safety net)
+  const lockUntil = parseInt(localStorage.getItem(LOCKOUT_KEY) || '0', 10);
+  if (lockUntil && lockUntil < Date.now()) {
+    localStorage.removeItem(LOCKOUT_KEY);
+    localStorage.removeItem(ATTEMPT_KEY);
+  }
+
+  // Listen for Firebase auth state changes
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      clearLoginError();
+      showAdminApp();
+      initAdminApp();
+    } else {
+      showLoginScreen();
+    }
+  });
+
+  initLoginKeys();
+  initModalBackdrop();
+});
+
+window.adminLogin = async function() {
+  // Check lockout first
+  const lockRemaining = getRemainingLockout();
+  if (lockRemaining > 0) {
+    setLoginError(`Too many failed attempts. Try again in ${formatLockoutTime(lockRemaining)}.`);
+    return;
+  }
+
+  const email = document.getElementById('login-username')?.value.trim();
+  const pw    = document.getElementById('login-password')?.value;
+
+  if (!email || !pw) {
+    setLoginError('Please enter your email and password.');
+    return;
+  }
+
+  const btn = document.getElementById('login-submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
+
+  try {
+    await signInWithEmailAndPassword(auth, email, pw);
+    // Success — onAuthStateChanged handles the rest
+    localStorage.removeItem(ATTEMPT_KEY);
+    localStorage.removeItem(LOCKOUT_KEY);
+  } catch (err) {
+    // Log exact error for debugging
+    console.error('[AdminLogin] Firebase error:', err.code, err.message);
+
+    // Track failed attempts
+    const attempts = parseInt(localStorage.getItem(ATTEMPT_KEY) || '0', 10) + 1;
+    localStorage.setItem(ATTEMPT_KEY, attempts);
+
+    if (attempts >= MAX_ATTEMPTS) {
+      localStorage.setItem(LOCKOUT_KEY, Date.now() + LOCKOUT_DURATION);
+      localStorage.removeItem(ATTEMPT_KEY);
+      setLoginError(`${MAX_ATTEMPTS} failed attempts. Login locked for 10 minutes.`);
+    } else {
+      const left = MAX_ATTEMPTS - attempts;
+      const msg = err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found'
+        ? `Invalid email or password. ${left} attempt${left !== 1 ? 's' : ''} remaining.`
+        : `Login failed. ${left} attempt${left !== 1 ? 's' : ''} remaining.`;
+      setLoginError(msg);
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'SIGN IN'; }
   }
 };
-window.adminLogout = function() { localStorage.removeItem(STORAGE_KEY); showLoginScreen(); const pw = document.getElementById('login-password'); if (pw) pw.value = ''; };
+
+window.adminLogout = async function() {
+  try {
+    await signOut(auth);
+  } catch (e) {
+    console.warn('Logout error:', e);
+  }
+  showLoginScreen();
+  const pw = document.getElementById('login-password');
+  if (pw) pw.value = '';
+  const em = document.getElementById('login-username');
+  if (em) em.value = '';
+};
+
 function initLoginKeys() {
-  document.getElementById('login-password')?.addEventListener('keydown', e => { if (e.key === 'Enter') window.adminLogin(); });
-  document.getElementById('login-username')?.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-password')?.focus(); });
+  document.getElementById('login-password')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') window.adminLogin();
+  });
+  document.getElementById('login-username')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('login-password')?.focus();
+  });
+
+  // Show lockout message immediately if still locked
+  const lockRemaining = getRemainingLockout();
+  if (lockRemaining > 0) {
+    setLoginError(`Login locked. Try again in ${formatLockoutTime(lockRemaining)}.`);
+  }
 }
 
 // ============================================================
@@ -635,63 +758,190 @@ window.deleteEnquiry = async function(id) {
 };
 
 // ============================================================
-// SECTION 16: BULK UPLOAD (exact PSJH logic, RN categories)
-// ============================================================
-let bulkRows = [];
 
+// ============================================================
+// SECTION 16: BULK UPLOAD — New Flow
+// Step 1: Upload images to Cloudinary directly inside admin
+// Step 2: Download pre-filled CSV template (with Cloudinary URLs already in it)
+// Step 3: Fill text data in CSV (name, price, sizes, etc.)
+// Step 4: Upload CSV → preview → import to Firestore
+// ============================================================
+
+// ── State ────────────────────────────────────────────────────────────────────
+let bulkRows         = [];          // parsed CSV rows waiting to import
+let bulkUploadedImgs = [];          // { file, localUrl, cloudinaryUrl, status, name }
+
+// ── Render bulk upload UI ────────────────────────────────────────────────────
 function renderBulkUpload() {
-  const container = document.getElementById('section-bulk-upload'); if (!container) return;
+  const container = document.getElementById('section-bulk-upload');
+  if (!container) return;
+
   container.innerHTML = `
     <div class="admin-page-header">
-      <div><div class="section-label">Import</div><div class="admin-page-title">BULK UPLOAD</div></div>
-      <a href="#" onclick="downloadCSVTemplate();return false" class="btn btn-ghost btn-sm">⬇ Download CSV Template</a>
+      <div>
+        <div class="section-label">Import</div>
+        <div class="admin-page-title">BULK UPLOAD</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="downloadCSVTemplate()">⬇ Download CSV Template</button>
     </div>
 
-    <div class="bulk-step-card" style="margin-bottom:14px">
-      <div class="bulk-step-header"><div class="bulk-step-num">1</div><div><div class="bulk-step-title">Upload images to Cloudinary first</div><div class="bulk-step-sub">Go to cloudinary.com → Media Library → Upload → Copy URL into CSV image1 column</div></div></div>
+    <!-- HOW IT WORKS banner -->
+    <div style="background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:20px;font-size:12px;color:var(--silver);line-height:1.7">
+      <div style="font-family:var(--font-cond);font-weight:700;font-size:13px;color:var(--accent);margin-bottom:6px;letter-spacing:.04em">HOW IT WORKS</div>
+      <span style="color:var(--text)">Step 1</span> — Upload product images here (no Cloudinary login needed) &nbsp;→&nbsp;
+      <span style="color:var(--text)">Step 2</span> — Download the pre-filled CSV (URLs already inserted) &nbsp;→&nbsp;
+      <span style="color:var(--text)">Step 3</span> — Fill in product details in Excel/Sheets &nbsp;→&nbsp;
+      <span style="color:var(--text)">Step 4</span> — Upload CSV &amp; import
     </div>
 
+    <!-- STEP 1: Upload images -->
     <div class="bulk-step-card" style="margin-bottom:14px">
-      <div class="bulk-step-header"><div class="bulk-step-num">2</div><div style="flex:1"><div class="bulk-step-title">Fill the CSV template</div><div class="bulk-step-sub">Download template above, fill in Excel/Sheets, save as .csv</div></div></div>
+      <div class="bulk-step-header">
+        <div class="bulk-step-num">1</div>
+        <div style="flex:1">
+          <div class="bulk-step-title">Upload Product Images</div>
+          <div class="bulk-step-sub">Select images for all products you want to add. Each image = one product row in the CSV. Images upload to Cloudinary automatically.</div>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <!-- Drop zone -->
+        <label id="bulk-img-drop-zone"
+          style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;border:2px dashed rgba(0,255,136,.25);border-radius:var(--radius-lg);padding:32px 20px;cursor:pointer;background:rgba(0,255,136,.03);transition:.2s;min-height:120px"
+          onmouseenter="this.style.borderColor='rgba(0,255,136,.5)'"
+          onmouseleave="this.style.borderColor='rgba(0,255,136,.25)'">
+          <input type="file" id="bulk-img-input" accept="image/*" multiple style="display:none" onchange="handleBulkImageSelect(this)"/>
+          <div style="font-size:2rem">🖼</div>
+          <div style="font-family:var(--font-cond);font-weight:700;font-size:13px">Click to select images</div>
+          <div style="font-size:11px;color:var(--silver)">Select multiple · JPG, PNG, WEBP · Max 10MB each</div>
+        </label>
+        <!-- Image upload list -->
+        <div id="bulk-img-list" style="margin-top:14px;display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+            <div style="font-family:var(--font-cond);font-weight:700;font-size:12px;color:var(--silver);letter-spacing:.06em" id="bulk-img-list-label">0 IMAGES</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-ghost btn-sm" onclick="document.getElementById('bulk-img-input').click()">+ Add More</button>
+              <button class="btn btn-accent btn-sm" id="bulk-upload-imgs-btn" onclick="runBulkImageUpload()">☁ Upload to Cloudinary</button>
+            </div>
+          </div>
+          <div id="bulk-img-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px"></div>
+          <!-- Upload progress -->
+          <div id="bulk-img-progress" style="display:none;margin-top:14px">
+            <div style="height:5px;background:var(--bg-3);border-radius:3px;overflow:hidden">
+              <div id="bulk-img-bar" style="height:100%;background:var(--accent);width:0%;transition:width .3s;border-radius:3px"></div>
+            </div>
+            <div id="bulk-img-progress-label" style="font-size:11px;color:var(--silver);margin-top:5px;font-family:var(--font-cond)"></div>
+          </div>
+          <!-- Download CSV button (shown after upload) -->
+          <div id="bulk-csv-download-wrap" style="display:none;margin-top:16px;padding:14px 16px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:var(--radius)">
+            <div style="font-family:var(--font-cond);font-weight:700;font-size:13px;color:var(--accent);margin-bottom:4px">✓ Images uploaded to Cloudinary</div>
+            <div style="font-size:12px;color:var(--silver);margin-bottom:12px">Download the pre-filled CSV template below. The image URLs are already inserted — just fill in the product details.</div>
+            <button class="btn btn-accent btn-sm" onclick="downloadPrefillledCSV()">⬇ Download Pre-filled CSV</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Fill CSV info -->
+    <div class="bulk-step-card" style="margin-bottom:14px">
+      <div class="bulk-step-header">
+        <div class="bulk-step-num">2</div>
+        <div style="flex:1">
+          <div class="bulk-step-title">Fill Product Details in CSV</div>
+          <div class="bulk-step-sub">Open the downloaded CSV in Excel or Google Sheets. Fill in name, price, sizes etc. Image URLs are already there. Save as .csv when done.</div>
+        </div>
+      </div>
       <div style="margin-top:14px;overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:11px">
-          <thead><tr style="background:var(--bg-3)">${['name','category','brand','price','originalPrice','stock','badge','featured','sizes','description','image1','image2'].map(h=>`<th style="padding:7px 10px;text-align:left;font-family:var(--font-cond);font-weight:700;letter-spacing:.05em;color:var(--accent);border-bottom:1px solid var(--border)">${h}</th>`).join('')}</tr></thead>
-          <tbody><tr style="background:var(--bg-2)">${['Real Madrid Jersey','jerseys','Adidas','699','999','15','HOT','true','S,M,L,XL','Fan version jersey','https://...',''].map(v=>`<td style="padding:7px 10px;color:var(--silver);border-bottom:1px solid var(--border);white-space:nowrap">${v}</td>`).join('')}</tr></tbody>
+          <thead>
+            <tr style="background:var(--bg-3)">
+              ${['name','category','type','brand','price','originalPrice','stock','badge','featured','sizes','description','image1','image2'].map(h =>
+                `<th style="padding:7px 10px;text-align:left;font-family:var(--font-cond);font-weight:700;letter-spacing:.05em;color:var(--accent);border-bottom:1px solid var(--border);white-space:nowrap">${h}</th>`
+              ).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background:var(--bg-2)">
+              ${['Real Madrid Jersey','jerseys','fan','Adidas','699','999','15','HOT','true','S,M,L,XL','Fan version jersey','<auto-filled>',''].map(v =>
+                `<td style="padding:7px 10px;color:var(--silver);border-bottom:1px solid var(--border);white-space:nowrap">${v}</td>`
+              ).join('')}
+            </tr>
+          </tbody>
         </table>
       </div>
       <div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;font-size:11px">
-        ${[['category','jerseys · studs · gear'],['badge','HOT · NEW · SALE · BESTSELLER'],['featured','true or false'],['sizes','comma-separated'],['price/originalPrice','numbers only, no ₹'],['image1-2','full Cloudinary URL']].map(([k,v])=>`<div style="background:var(--bg-3);border-radius:var(--radius);padding:8px 10px;border:1px solid var(--border)"><div style="font-family:var(--font-cond);font-weight:700;color:var(--accent);font-size:10px;margin-bottom:2px">${k}</div><div style="color:var(--silver)">${v}</div></div>`).join('')}
+        ${[
+          ['category', 'jerseys · studs · gear'],
+          ['type', 'fan · player (jerseys) · fg · ag · accessory · ball'],
+          ['badge', 'HOT · NEW · SALE · BESTSELLER · PREMIUM'],
+          ['featured', 'true or false'],
+          ['sizes', 'comma-separated: S,M,L,XL or 6,7,8,9'],
+          ['price / originalPrice', 'numbers only, no ₹'],
+          ['image1 / image2', 'auto-filled from Step 1 upload']
+        ].map(([k, v]) => `
+          <div style="background:var(--bg-3);border-radius:var(--radius);padding:8px 10px;border:1px solid var(--border)">
+            <div style="font-family:var(--font-cond);font-weight:700;color:var(--accent);font-size:10px;margin-bottom:2px">${k}</div>
+            <div style="color:var(--silver)">${v}</div>
+          </div>`).join('')}
       </div>
     </div>
 
+    <!-- STEP 3: Upload CSV -->
     <div class="bulk-step-card" style="margin-bottom:14px">
-      <div class="bulk-step-header"><div class="bulk-step-num">3</div><div><div class="bulk-step-title">Upload your CSV</div><div class="bulk-step-sub">Select your filled CSV — products will be previewed before import</div></div></div>
+      <div class="bulk-step-header">
+        <div class="bulk-step-num">3</div>
+        <div>
+          <div class="bulk-step-title">Upload Your Filled CSV</div>
+          <div class="bulk-step-sub">Select your completed CSV — products will be previewed before import</div>
+        </div>
+      </div>
       <div style="margin-top:14px">
-        <label style="display:flex;align-items:center;justify-content:center;gap:10px;border:2px dashed rgba(0,255,136,.25);border-radius:var(--radius-lg);padding:28px 20px;cursor:pointer;background:rgba(0,255,136,.03);transition:.2s" id="csv-drop-zone" onmouseenter="this.style.borderColor='rgba(0,255,136,.5)'" onmouseleave="this.style.borderColor='rgba(0,255,136,.25)'">
+        <label
+          style="display:flex;align-items:center;justify-content:center;gap:10px;border:2px dashed rgba(0,255,136,.25);border-radius:var(--radius-lg);padding:28px 20px;cursor:pointer;background:rgba(0,255,136,.03);transition:.2s"
+          id="csv-drop-zone"
+          onmouseenter="this.style.borderColor='rgba(0,255,136,.5)'"
+          onmouseleave="this.style.borderColor='rgba(0,255,136,.25)'">
           <input type="file" id="csv-file-input" accept=".csv" style="display:none" onchange="handleCSVUpload(this)"/>
-          <div style="text-align:center"><div style="font-size:2.5rem;margin-bottom:8px">📄</div><div style="font-family:var(--font-cond);font-weight:700;font-size:13px">Click to select CSV file</div><div style="font-size:11px;color:var(--silver);margin-top:4px">Only .csv · Max 500 rows</div></div>
+          <div style="text-align:center">
+            <div style="font-size:2.5rem;margin-bottom:8px">📄</div>
+            <div style="font-family:var(--font-cond);font-weight:700;font-size:13px">Click to select CSV file</div>
+            <div style="font-size:11px;color:var(--silver);margin-top:4px">Only .csv · Max 500 rows</div>
+          </div>
         </label>
       </div>
     </div>
 
+    <!-- STEP 4: Preview & Import -->
     <div id="bulk-preview-section" style="display:none">
       <div class="bulk-step-card">
         <div class="bulk-step-header">
           <div class="bulk-step-num">4</div>
-          <div style="flex:1"><div class="bulk-step-title">Preview &amp; Import</div><div class="bulk-step-sub" id="bulk-preview-subtitle">Review products before importing.</div></div>
+          <div style="flex:1">
+            <div class="bulk-step-title">Preview &amp; Import</div>
+            <div class="bulk-step-sub" id="bulk-preview-subtitle">Review products before importing.</div>
+          </div>
           <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap">
-            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('csv-file-input').value='';document.getElementById('bulk-preview-section').style.display='none';bulkRows=[]">✕ Clear</button>
-            <button class="btn btn-accent btn-sm" id="bulk-import-btn" onclick="runBulkImport()"><span id="bulk-import-label">⬆ Import All</span></button>
+            <button class="btn btn-ghost btn-sm" onclick="clearBulkPreview()">✕ Clear</button>
+            <button class="btn btn-accent btn-sm" id="bulk-import-btn" onclick="runBulkImport()">
+              <span id="bulk-import-label">⬆ Import All</span>
+            </button>
           </div>
         </div>
         <div id="bulk-import-progress" style="display:none;margin-top:14px">
-          <div style="height:6px;background:var(--bg-3);border-radius:3px;overflow:hidden"><div id="bulk-progress-bar" style="height:100%;background:var(--accent);width:0%;transition:width .3s;border-radius:3px"></div></div>
+          <div style="height:6px;background:var(--bg-3);border-radius:3px;overflow:hidden">
+            <div id="bulk-progress-bar" style="height:100%;background:var(--accent);width:0%;transition:width .3s;border-radius:3px"></div>
+          </div>
           <div id="bulk-progress-label" style="font-size:11px;color:var(--silver);margin-top:6px;font-family:var(--font-cond)"></div>
         </div>
         <div id="bulk-import-results" style="display:none;margin-top:12px"></div>
         <div style="margin-top:16px;overflow-x:auto">
           <table style="width:100%;border-collapse:collapse;font-size:12px" id="bulk-preview-table">
-            <thead><tr style="background:var(--bg-3)">${['#','Name','Brand·Cat','Price','Stock','Image','Status'].map(h=>`<th style="padding:8px 10px;text-align:left;font-family:var(--font-cond);font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--accent);border-bottom:1px solid var(--border)">${h}</th>`).join('')}</tr></thead>
+            <thead>
+              <tr style="background:var(--bg-3)">
+                ${['#','Name','Brand · Cat','Price','Stock','Image','Status'].map(h =>
+                  `<th style="padding:8px 10px;text-align:left;font-family:var(--font-cond);font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--accent);border-bottom:1px solid var(--border)">${h}</th>`
+                ).join('')}
+              </tr>
+            </thead>
             <tbody id="bulk-preview-tbody"></tbody>
           </table>
         </div>
@@ -700,157 +950,440 @@ function renderBulkUpload() {
 }
 window.renderBulkUpload = renderBulkUpload;
 
-window.downloadCSVTemplate = function() {
-  const headers = ['name','category','brand','price','originalPrice','stock','badge','featured','sizes','description','image1','image2'];
-  const rows = [
-    ['Real Madrid Home Jersey 24/25','jerseys','Adidas','699','999','15','HOT','true','S,M,L,XL,XXL','Fan version jersey for 2024/25 season.','https://res.cloudinary.com/your-cloud/image/upload/example.jpg',''],
-    ['Nike Mercurial Vapor 15','studs','Nike','2499','3499','10','BESTSELLER','false','6,7,8,9,10','Speed boot for fast attackers.','https://res.cloudinary.com/your-cloud/image/upload/example2.jpg',''],
-  ];
-  const csv = [headers,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
-  const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); a.download = 'rn_sports_bulk_template.csv'; a.click();
+// ── Step 1a: Select images → show in grid ────────────────────────────────────
+window.handleBulkImageSelect = function(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+
+  // Validate each file
+  const valid = [];
+  for (const f of files) {
+    if (!f.type.startsWith('image/')) { showToast(`"${f.name}" is not an image — skipped`, 'error'); continue; }
+    if (f.size > 10 * 1024 * 1024)   { showToast(`"${f.name}" exceeds 10MB — skipped`, 'error'); continue; }
+    valid.push(f);
+  }
+  if (!valid.length) return;
+
+  // Add to state (avoid duplicates by name+size)
+  const existing = new Set(bulkUploadedImgs.map(x => x.name + x.size));
+  for (const f of valid) {
+    if (!existing.has(f.name + f.size)) {
+      bulkUploadedImgs.push({ file: f, localUrl: URL.createObjectURL(f), cloudinaryUrl: null, status: 'pending', name: f.name, size: f.size });
+    }
+  }
+
+  renderBulkImageGrid();
+  input.value = ''; // reset so same file can be re-added if needed
 };
 
-function parseCSV(text) {
-  const lines = text.trim().split(/\r?\n/); if (lines.length < 2) return [];
-  function parseLine(line) {
-    const vals = []; let inQ = false, cur = '';
-    for (let i=0; i<line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') { if (inQ && line[i+1]==='"') { cur+='"'; i++; } else inQ=!inQ; }
-      else if (ch === ',' && !inQ) { vals.push(cur.trim()); cur=''; }
-      else cur += ch;
+// ── Render image grid ────────────────────────────────────────────────────────
+function renderBulkImageGrid() {
+  const list  = document.getElementById('bulk-img-list');
+  const grid  = document.getElementById('bulk-img-grid');
+  const label = document.getElementById('bulk-img-list-label');
+  if (!grid || !list) return;
+
+  list.style.display = bulkUploadedImgs.length ? 'block' : 'none';
+  if (label) label.textContent = `${bulkUploadedImgs.length} IMAGE${bulkUploadedImgs.length !== 1 ? 'S' : ''}`;
+
+  grid.innerHTML = bulkUploadedImgs.map((img, i) => {
+    const statusColor = img.status === 'done' ? 'var(--green)' : img.status === 'error' ? 'var(--red)' : 'var(--silver)';
+    const statusText  = img.status === 'done' ? '✓ Uploaded' : img.status === 'error' ? '✕ Failed' : img.status === 'uploading' ? '⏳ Uploading…' : '⏳ Pending';
+    const canRemove   = img.status !== 'uploading';
+
+    return `<div style="background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative">
+      <img src="${img.localUrl}" alt="${img.name}" style="width:100%;height:100px;object-fit:cover;display:block"/>
+      ${canRemove ? `<button onclick="removeBulkImage(${i})" title="Remove" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);border:none;color:#fff;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>` : ''}
+      <div style="padding:6px 8px">
+        <div style="font-size:10px;color:var(--silver);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${img.name}">${img.name}</div>
+        <div style="font-size:10px;font-weight:700;font-family:var(--font-cond);color:${statusColor};margin-top:2px">${statusText}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Remove an image from the list ────────────────────────────────────────────
+window.removeBulkImage = function(idx) {
+  if (bulkUploadedImgs[idx]?.status === 'uploading') return;
+  URL.revokeObjectURL(bulkUploadedImgs[idx]?.localUrl);
+  bulkUploadedImgs.splice(idx, 1);
+  renderBulkImageGrid();
+  // Hide download wrap if remaining images aren't all uploaded
+  const allDone = bulkUploadedImgs.length > 0 && bulkUploadedImgs.every(x => x.status === 'done');
+  const wrap = document.getElementById('bulk-csv-download-wrap');
+  if (wrap) wrap.style.display = allDone ? 'block' : 'none';
+};
+
+// ── Step 1b: Upload all pending images to Cloudinary ─────────────────────────
+window.runBulkImageUpload = async function() {
+  const pending = bulkUploadedImgs.filter(x => x.status === 'pending' || x.status === 'error');
+  if (!pending.length) { showToast('All images already uploaded.'); return; }
+
+  const btn       = document.getElementById('bulk-upload-imgs-btn');
+  const progressEl = document.getElementById('bulk-img-progress');
+  const bar        = document.getElementById('bulk-img-bar');
+  const barLabel   = document.getElementById('bulk-img-progress-label');
+
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Uploading…'; }
+  if (progressEl) progressEl.style.display = 'block';
+
+  let done = 0;
+
+  for (let i = 0; i < bulkUploadedImgs.length; i++) {
+    const img = bulkUploadedImgs[i];
+    if (img.status === 'done') { done++; continue; }
+
+    img.status = 'uploading';
+    renderBulkImageGrid();
+
+    const pct = Math.round((done / bulkUploadedImgs.length) * 100);
+    if (bar) bar.style.width = pct + '%';
+    if (barLabel) barLabel.textContent = `Uploading ${done + 1} of ${bulkUploadedImgs.length}: "${img.name}"`;
+
+    try {
+      const { uploadToCloudinary } = await import('./cloudinary.js');
+      img.cloudinaryUrl = await uploadToCloudinary(img.file, 'rn_bulk_upload');
+      img.status = 'done';
+    } catch (err) {
+      img.status = 'error';
+      console.error('[BulkUpload] Image upload failed:', img.name, err.message);
+      showToast(`Failed to upload "${img.name}" — you can retry`, 'error');
     }
-    vals.push(cur.trim()); return vals;
+    done++;
+    renderBulkImageGrid();
   }
+
+  if (bar) bar.style.width = '100%';
+  if (barLabel) barLabel.textContent = 'Upload complete!';
+  setTimeout(() => { if (progressEl) progressEl.style.display = 'none'; }, 1500);
+
+  if (btn) { btn.disabled = false; btn.textContent = '☁ Upload to Cloudinary'; }
+
+  const allDone = bulkUploadedImgs.every(x => x.status === 'done');
+  const anyDone = bulkUploadedImgs.some(x => x.status === 'done');
+  const wrap = document.getElementById('bulk-csv-download-wrap');
+  if (wrap) wrap.style.display = anyDone ? 'block' : 'none';
+
+  if (allDone) {
+    showToast(`${bulkUploadedImgs.length} image${bulkUploadedImgs.length !== 1 ? 's' : ''} uploaded ✓`);
+  }
+};
+
+// ── Step 2: Download pre-filled CSV with Cloudinary URLs ─────────────────────
+window.downloadPrefillledCSV = function() {
+  const uploaded = bulkUploadedImgs.filter(x => x.status === 'done');
+  if (!uploaded.length) { showToast('No uploaded images to include.', 'error'); return; }
+
+  const headers = ['name','category','type','brand','price','originalPrice','stock','badge','featured','sizes','description','image1','image2'];
+
+  // One row per uploaded image, URL pre-filled
+  const rows = uploaded.map(img => {
+    const baseName = img.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+    return [
+      baseName,          // name — admin fills this in
+      'jerseys',         // category — admin changes
+      'fan',             // type — admin changes (fan / player)
+      '',                // brand
+      '',                // price
+      '',                // originalPrice
+      '10',              // stock default
+      '',                // badge
+      'false',           // featured
+      'S,M,L,XL',        // sizes default
+      '',                // description
+      img.cloudinaryUrl, // image1 — PRE-FILLED ✓
+      ''                 // image2 — optional second image
+    ];
+  });
+
+  const escape = v => `"${String(v).replace(/"/g, '""')}"`;
+  const csv = [headers, ...rows].map(r => r.map(escape).join(',')).join('\n');
+
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `rn_products_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  showToast('CSV downloaded ✓ — fill in product details and re-upload');
+};
+
+// ── Blank CSV template download (for users who haven't uploaded images yet) ──
+window.downloadCSVTemplate = function() {
+  const headers = ['name','category','type','brand','price','originalPrice','stock','badge','featured','sizes','description','image1','image2'];
+  const rows = [
+    ['Real Madrid Home Jersey 24/25','jerseys','fan','Adidas','699','999','15','HOT','true','S,M,L,XL,XXL','Fan version jersey for 2024/25 season.','https://res.cloudinary.com/YOUR_CLOUD/image/upload/example.jpg',''],
+    ['Real Madrid Home Jersey 24/25 (Player)','jerseys','player','Adidas','1499','1999','8','PREMIUM','true','S,M,L,XL','Player version jersey for 2024/25 season.','https://res.cloudinary.com/YOUR_CLOUD/image/upload/example3.jpg',''],
+    ['Nike Mercurial Vapor 15','studs','fg','Nike','2499','3499','10','BESTSELLER','false','6,7,8,9,10,11','Speed boot for fast attackers.','https://res.cloudinary.com/YOUR_CLOUD/image/upload/example2.jpg',''],
+  ];
+  const escape = v => `"${String(v).replace(/"/g, '""')}"`;
+  const csv = [headers, ...rows].map(r => r.map(escape).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'rn_sports_bulk_template.csv';
+  a.click();
+};
+
+// ── CSV Parser (handles quoted fields, commas inside quotes) ─────────────────
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+
+  function parseLine(line) {
+    const vals = [];
+    let inQ = false, cur = '';
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+        else inQ = !inQ;
+      } else if (ch === ',' && !inQ) {
+        vals.push(cur.trim()); cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    vals.push(cur.trim());
+    return vals;
+  }
+
   const headers = parseLine(lines[0]).map(h => h.toLowerCase().trim());
-  const rows = [];
-  for (let i=1; i<lines.length; i++) {
-    if (!lines[i].trim()) continue; if (rows.length>=500) { showToast('CSV truncated at 500 rows.','error'); break; }
-    const vals = parseLine(lines[i]); const obj = {};
-    headers.forEach((h,idx) => { obj[h] = (vals[idx]||'').trim(); });
+  const rows    = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    if (rows.length >= 500) { showToast('CSV truncated at 500 rows.', 'error'); break; }
+    const vals = parseLine(lines[i]);
+    const obj  = {};
+    headers.forEach((h, idx) => { obj[h] = (vals[idx] || '').trim(); });
     rows.push(obj);
   }
   return rows;
 }
 
+// ── Row validator ────────────────────────────────────────────────────────────
 function validateRow(row) {
   const errors = [];
-  if (!row.name) errors.push('name missing');
-  const cat = (row.category||'').toLowerCase().trim();
-  if (!['jerseys','studs','gear'].includes(cat)) errors.push('category must be: jerseys / studs / gear');
-  if (!(row.brand||'').trim()) errors.push('brand missing');
-  if (!row.price||isNaN(Number(row.price))) errors.push('price invalid');
-  const orig = Number(row.originalprice||row.originalPrice||0);
-  if (isNaN(orig)||orig<=0) errors.push('originalPrice invalid');
-  if (Number(row.price)>orig) errors.push('price > originalPrice');
-  if (!row.image1) errors.push('image1 URL missing');
+  if (!(row.name || '').trim())                         errors.push('name missing');
+  const cat = (row.category || '').toLowerCase().trim();
+  if (!['jerseys', 'studs', 'gear'].includes(cat))      errors.push('category must be: jerseys / studs / gear');
+  if (!(row.brand || '').trim())                        errors.push('brand missing');
+  const price = Number(row.price);
+  if (!row.price || isNaN(price) || price <= 0)         errors.push('price invalid');
+  const orig  = Number(row.originalprice || row.originalPrice || 0);
+  if (isNaN(orig) || orig <= 0)                         errors.push('originalPrice invalid');
+  if (!isNaN(price) && !isNaN(orig) && price > orig)    errors.push('price > originalPrice');
+  const img1 = (row.image1 || '').trim();
+  if (!img1 || !img1.startsWith('http'))                errors.push('image1 URL missing or invalid');
   return errors;
 }
 
+// ── Clear bulk preview ───────────────────────────────────────────────────────
+window.clearBulkPreview = function() {
+  const input = document.getElementById('csv-file-input');
+  const prev  = document.getElementById('bulk-preview-section');
+  if (input) input.value = '';
+  if (prev)  prev.style.display = 'none';
+  bulkRows = [];
+};
+
+// ── Step 3: Handle CSV upload ────────────────────────────────────────────────
 window.handleCSVUpload = function(input) {
-  const file = input.files[0]; if (!file) return;
-  if (!file.name.toLowerCase().endsWith('.csv')) { showToast('Please select a valid .csv file.','error'); input.value=''; return; }
+  const file = input.files[0];
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.csv')) {
+    showToast('Please select a valid .csv file.', 'error');
+    input.value = '';
+    return;
+  }
+
   const reader = new FileReader();
-  reader.onerror = () => showToast('Failed to read file.','error');
+  reader.onerror = () => showToast('Failed to read file.', 'error');
   reader.onload = e => {
     try {
-      const rows = parseCSV(e.target.result); if (!rows.length) { showToast('CSV appears empty.','error'); return; }
-      bulkRows = rows; renderBulkPreview(rows);
-      ['bulk-import-progress','bulk-import-results'].forEach(id => { const el=document.getElementById(id); if(el)el.style.display='none'; });
-      const bar=document.getElementById('bulk-progress-bar'); if(bar)bar.style.width='0%';
-      document.getElementById('bulk-preview-section').style.display='block';
-      document.getElementById('bulk-preview-section').scrollIntoView({behavior:'smooth',block:'start'});
-    } catch(err) { showToast('Error parsing CSV: '+err.message,'error'); }
+      const rows = parseCSV(e.target.result);
+      if (!rows.length) { showToast('CSV appears empty.', 'error'); return; }
+
+      bulkRows = rows;
+      renderBulkPreview(rows);
+
+      // Reset progress/results
+      ['bulk-import-progress', 'bulk-import-results'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+      const bar = document.getElementById('bulk-progress-bar');
+      if (bar) bar.style.width = '0%';
+
+      const section = document.getElementById('bulk-preview-section');
+      if (section) {
+        section.style.display = 'block';
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } catch (err) {
+      showToast('Error parsing CSV: ' + err.message, 'error');
+    }
   };
   reader.readAsText(file);
 };
 
+// ── Step 4a: Render preview table ────────────────────────────────────────────
 function renderBulkPreview(rows) {
-  const tbody    = document.getElementById('bulk-preview-tbody'); if (!tbody) return;
+  const tbody    = document.getElementById('bulk-preview-tbody');
   const subtitle = document.getElementById('bulk-preview-subtitle');
-  let validCount = 0, html = '';
-  rows.forEach((row,idx) => {
-    const errors = validateRow(row); const isValid = errors.length===0; if (isValid) validCount++;
-    const imgUrl = row.image1||''; const hasImg = imgUrl.startsWith('http');
-    const rowBg = idx%2===0?'var(--bg-2)':'var(--bg-3)';
+  if (!tbody) return;
+
+  let validCount = 0;
+  let html = '';
+
+  rows.forEach((row, idx) => {
+    const errors  = validateRow(row);
+    const isValid = errors.length === 0;
+    if (isValid) validCount++;
+
+    const imgUrl = (row.image1 || '').trim();
+    const hasImg = imgUrl.startsWith('http');
+    const rowBg  = idx % 2 === 0 ? 'var(--bg-2)' : 'var(--bg-3)';
+
+    const statusHtml = isValid
+      ? `<span style="color:var(--green);font-family:var(--font-cond);font-size:10px;font-weight:700">✓ READY</span>`
+      : `<span style="color:var(--red);font-family:var(--font-cond);font-size:10px;font-weight:700" title="${errors.join(', ')}">✕ ${errors[0]}${errors.length > 1 ? ` +${errors.length - 1}` : ''}</span>`;
+
     html += `<tr id="bulk-row-${idx}" style="background:${rowBg}">
-      <td style="padding:8px 10px;font-family:var(--font-cond);font-size:11px;color:var(--silver);border-bottom:1px solid var(--border)">${idx+1}</td>
-      <td style="padding:8px 10px;font-weight:600;font-size:12px;border-bottom:1px solid var(--border);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${row.name||'—'}</td>
-      <td style="padding:8px 10px;font-size:11px;color:var(--silver);border-bottom:1px solid var(--border)">${row.brand||'—'} · ${row.category||'—'}</td>
-      <td style="padding:8px 10px;font-size:12px;color:var(--accent);font-family:var(--font-head);border-bottom:1px solid var(--border)">₹${row.price||'—'}<span style="color:var(--silver);font-size:10px;text-decoration:line-through;margin-left:4px">₹${row.originalprice||row.originalPrice||''}</span></td>
-      <td style="padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${row.stock||'10'}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--border)">${hasImg?`<img src="${imgUrl}" style="width:36px;height:36px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" onerror="this.style.display='none'"/>`:`<span style="font-size:10px;color:var(--silver)">No image</span>`}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid var(--border)" id="bulk-row-status-${idx}">${isValid?`<span style="color:var(--green);font-family:var(--font-cond);font-size:10px;font-weight:700">✓ READY</span>`:`<span style="color:var(--red);font-family:var(--font-cond);font-size:10px;font-weight:700" title="${errors.join(', ')}">✕ ${errors[0]}${errors.length>1?` +${errors.length-1}`:''}</span>`}</td>
+      <td style="padding:8px 10px;font-family:var(--font-cond);font-size:11px;color:var(--silver);border-bottom:1px solid var(--border)">${idx + 1}</td>
+      <td style="padding:8px 10px;font-weight:600;font-size:12px;border-bottom:1px solid var(--border);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${row.name || '—'}</td>
+      <td style="padding:8px 10px;font-size:11px;color:var(--silver);border-bottom:1px solid var(--border)">${row.brand || '—'} · ${row.category || '—'}</td>
+      <td style="padding:8px 10px;font-size:12px;color:var(--accent);font-family:var(--font-head);border-bottom:1px solid var(--border)">
+        ₹${row.price || '—'}
+        <span style="color:var(--silver);font-size:10px;text-decoration:line-through;margin-left:4px">₹${row.originalprice || row.originalPrice || ''}</span>
+      </td>
+      <td style="padding:8px 10px;font-size:12px;border-bottom:1px solid var(--border)">${row.stock || '10'}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--border)">
+        ${hasImg
+          ? `<img src="${imgUrl}" style="width:36px;height:36px;object-fit:cover;border-radius:4px;border:1px solid var(--border)" onerror="this.style.display='none'"/>`
+          : `<span style="font-size:10px;color:var(--silver)">No image</span>`}
+      </td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--border)" id="bulk-row-status-${idx}">${statusHtml}</td>
     </tr>`;
   });
+
   tbody.innerHTML = html;
+
   const errorCount = rows.length - validCount;
-  if (subtitle) subtitle.innerHTML = `<span style="color:var(--green)">✓ ${validCount} ready</span>${errorCount>0?` · <span style="color:var(--red)">✕ ${errorCount} with errors (will be skipped)</span>`:''} · ${rows.length} total rows`;
-  const btn=document.getElementById('bulk-import-btn'); const lbl=document.getElementById('bulk-import-label');
-  if(btn)btn.disabled=false; if(lbl)lbl.textContent='⬆ Import All';
+  if (subtitle) {
+    subtitle.innerHTML =
+      `<span style="color:var(--green)">✓ ${validCount} ready</span>` +
+      (errorCount > 0 ? ` · <span style="color:var(--red)">✕ ${errorCount} with errors (will be skipped)</span>` : '') +
+      ` · ${rows.length} total rows`;
+  }
+
+  const btn = document.getElementById('bulk-import-btn');
+  const lbl = document.getElementById('bulk-import-label');
+  if (btn) btn.disabled = false;
+  if (lbl) lbl.textContent = '⬆ Import All';
 }
 
+// ── Step 4b: Run import to Firestore ─────────────────────────────────────────
 window.runBulkImport = async function() {
-  const validRows = bulkRows.filter(r => validateRow(r).length===0); if (!validRows.length) { showToast('No valid rows to import.','error'); return; }
-  const btn=document.getElementById('bulk-import-btn'); const lbl=document.getElementById('bulk-import-label');
-  const progressWrap=document.getElementById('bulk-import-progress'); const bar=document.getElementById('bulk-progress-bar');
-  const progressLabel=document.getElementById('bulk-progress-label'); const resultsEl=document.getElementById('bulk-import-results');
-  if(btn)btn.disabled=true; if(lbl)lbl.textContent='⏳ Importing…';
-  if(progressWrap)progressWrap.style.display='block'; if(bar)bar.style.width='0%'; if(resultsEl)resultsEl.style.display='none';
-  let imported=0, failed=0; const failedNames=[];
+  const validRows = bulkRows.filter(r => validateRow(r).length === 0);
+  if (!validRows.length) { showToast('No valid rows to import.', 'error'); return; }
+
+  const btn          = document.getElementById('bulk-import-btn');
+  const lbl          = document.getElementById('bulk-import-label');
+  const progressWrap = document.getElementById('bulk-import-progress');
+  const bar          = document.getElementById('bulk-progress-bar');
+  const progressLbl  = document.getElementById('bulk-progress-label');
+  const resultsEl    = document.getElementById('bulk-import-results');
+
+  if (btn) btn.disabled = true;
+  if (lbl) lbl.textContent = '⏳ Importing…';
+  if (progressWrap) progressWrap.style.display = 'block';
+  if (bar) bar.style.width = '0%';
+  if (resultsEl) resultsEl.style.display = 'none';
+
+  let imported = 0, failed = 0;
+  const failedNames = [];
+
   try {
-    for (let i=0; i<validRows.length; i++) {
-      const row = validRows[i]; const pct = Math.round((i/validRows.length)*100);
-      if(bar)bar.style.width=pct+'%'; if(progressLabel)progressLabel.textContent=`Importing ${i+1} of ${validRows.length}: "${row.name}"`;
+    for (let i = 0; i < validRows.length; i++) {
+      const row = validRows[i];
+      const pct = Math.round((i / validRows.length) * 100);
+      if (bar) bar.style.width = pct + '%';
+      if (progressLbl) progressLbl.textContent = `Importing ${i + 1} of ${validRows.length}: "${row.name}"`;
+
+      // Find original index in bulkRows for status cell update
+      const originalIdx = bulkRows.indexOf(row);
+      const statusCell  = document.getElementById(`bulk-row-status-${originalIdx}`);
+
       try {
-        const images = [row.image1,row.image2].filter(u=>u&&u.startsWith('http'));
-        const sizes  = (row.sizes||'').split(',').map(s=>s.trim()).filter(Boolean);
-        const orig   = Number(row.originalprice||row.originalPrice||0);
-        await addDoc(collection(db,'products'), {
-          name: row.name, category:(row.category||'').toLowerCase().trim(),
-          brand: (row.brand||'').trim(), price:Number(row.price), originalPrice:orig,
-          stock:Number(row.stock)||10, badge:row.badge||null,
-          featured:(row.featured||'').toLowerCase()==='true',
-          sizes:sizes.length?sizes:['S','M','L','XL'],
-          description:row.description||'Premium sports product.',
-          images:images.length?images:['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80'],
-          features:[],specs:{},rating:4.5,reviews:0,
-          createdAt:serverTimestamp(),updatedAt:serverTimestamp()
+        const images   = [row.image1, row.image2].filter(u => u && u.trim().startsWith('http'));
+        const sizes    = (row.sizes || '').split(',').map(s => s.trim()).filter(Boolean);
+        const orig     = Number(row.originalprice || row.originalPrice || 0);
+        const rowType  = (row.type || '').trim().toLowerCase() || null;
+
+        await addDoc(collection(db, 'products'), {
+          name:          row.name.trim(),
+          category:      (row.category || '').toLowerCase().trim(),
+          brand:         (row.brand || '').trim(),
+          price:         Number(row.price),
+          originalPrice: orig,
+          stock:         Number(row.stock) || 10,
+          badge:         row.badge || null,
+          featured:      (row.featured || '').toLowerCase() === 'true',
+          sizes:         sizes.length ? sizes : ['S', 'M', 'L', 'XL'],
+          description:   row.description || 'Premium sports product.',
+          images:        images,
+          type:          rowType,
+          team:          null,
+          features:      [],
+          specs:         {},
+          rating:        4.5,
+          reviews:       0,
+          createdAt:     serverTimestamp(),
+          updatedAt:     serverTimestamp()
         });
+
         imported++;
-        const originalIdx = bulkRows.findIndex(r=>r===row);
-        const statusCell  = document.getElementById(`bulk-row-status-${originalIdx}`);
-        if(statusCell)statusCell.innerHTML=`<span style="color:var(--green);font-family:var(--font-cond);font-size:10px;font-weight:700">✓ IMPORTED</span>`;
-      } catch(rowErr) {
-        failed++; failedNames.push(row.name); console.error('[Bulk] Failed row:', row.name, rowErr.message);
-        const originalIdx = bulkRows.findIndex(r=>r===row);
-        const statusCell  = document.getElementById(`bulk-row-status-${originalIdx}`);
-        if(statusCell)statusCell.innerHTML=`<span style="color:var(--red);font-family:var(--font-cond);font-size:10px;font-weight:700">✕ FAILED</span>`;
+        if (statusCell) statusCell.innerHTML = `<span style="color:var(--green);font-family:var(--font-cond);font-size:10px;font-weight:700">✓ IMPORTED</span>`;
+      } catch (rowErr) {
+        failed++;
+        failedNames.push(row.name);
+        console.error('[BulkImport] Row failed:', row.name, rowErr.message);
+        if (statusCell) statusCell.innerHTML = `<span style="color:var(--red);font-family:var(--font-cond);font-size:10px;font-weight:700">✕ FAILED</span>`;
       }
     }
   } finally {
-    if(bar)bar.style.width='100%'; if(progressLabel)progressLabel.textContent=imported>0?'Complete!':'No products imported.';
-    if(btn)btn.disabled=false; if(lbl)lbl.textContent='⬆ Import All';
-    setTimeout(()=>{ if(progressWrap)progressWrap.style.display='none'; if(bar)bar.style.width='0%'; },1500);
+    if (bar) bar.style.width = '100%';
+    if (progressLbl) progressLbl.textContent = imported > 0 ? 'Complete!' : 'No products imported.';
+    if (btn) btn.disabled = false;
+    if (lbl) lbl.textContent = '⬆ Import All';
+    setTimeout(() => {
+      if (progressWrap) progressWrap.style.display = 'none';
+      if (bar) bar.style.width = '0%';
+    }, 1500);
   }
+
+  // Reload product list in admin
   await loadProducts();
-  if(resultsEl) {
-    resultsEl.style.display='block';
-    resultsEl.innerHTML=`<div style="background:${failed===0?'rgba(34,197,94,.08)':'rgba(255,68,68,.08)'};border:1px solid ${failed===0?'rgba(34,197,94,.25)':'rgba(255,68,68,.25)'};border-radius:var(--radius);padding:14px 16px">
-      <div style="font-family:var(--font-cond);font-weight:700;font-size:14px;color:${failed===0?'var(--green)':'var(--orange)'}">
-        ${failed===0?'✓ All products imported successfully!':` ⚠ ${imported} imported, ${failed} failed`}
-      </div>
-      ${failed>0?`<div style="font-size:11px;color:var(--silver);margin-top:6px">Failed: ${failedNames.join(', ')}</div>`:''}
-      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-ghost btn-sm" onclick="showSection('products',document.querySelector('.admin-nav-item[onclick*=products]'))">View Products →</button>
-        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('csv-file-input').value='';document.getElementById('bulk-preview-section').style.display='none';bulkRows=[];renderBulkUpload()">Upload Another CSV</button>
-      </div>
-    </div>`;
+
+  // Show results summary
+  if (resultsEl) {
+    const success = failed === 0;
+    resultsEl.style.display = 'block';
+    resultsEl.innerHTML = `
+      <div style="background:${success ? 'rgba(34,197,94,.08)' : 'rgba(255,148,0,.08)'};border:1px solid ${success ? 'rgba(34,197,94,.25)' : 'rgba(255,148,0,.25)'};border-radius:var(--radius);padding:14px 16px">
+        <div style="font-family:var(--font-cond);font-weight:700;font-size:14px;color:${success ? 'var(--green)' : 'var(--orange)'}">
+          ${success ? `✓ All ${imported} product${imported !== 1 ? 's' : ''} imported successfully!` : `⚠ ${imported} imported, ${failed} failed`}
+        </div>
+        ${failed > 0 ? `<div style="font-size:11px;color:var(--silver);margin-top:6px">Failed: ${failedNames.join(', ')}</div>` : ''}
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="showSection('products', document.querySelector('.admin-nav-item[onclick*=products]'))">View Products →</button>
+          <button class="btn btn-ghost btn-sm" onclick="bulkRows=[];bulkUploadedImgs=[];renderBulkUpload()">Upload Another Batch</button>
+        </div>
+      </div>`;
   }
-  showToast(`${imported} product${imported!==1?'s':''} imported ✓`);
+
+  showToast(`${imported} product${imported !== 1 ? 's' : ''} imported ✓`);
 };
 
-// ============================================================
 // SECTION 17: INIT
 // ============================================================
 function initModalBackdrop() {
@@ -865,9 +1398,3 @@ async function initAdminApp() {
   initMobileSidebar();
   console.log('[Admin] Ready ✓');
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-  initLoginKeys();
-  if (checkLogin()) { showAdminApp(); initAdminApp(); }
-  else showLoginScreen();
-});

@@ -7,10 +7,9 @@
 
 /* ═══ PAGE HEADER ════════════════════════════════════════════════════════════ */
 .checkout-header {
-  background: var(--bg-2);
   border-bottom: 1px solid var(--border);
-  padding: 100px 0 28px;
-  margin-top: 35px;
+  padding: 20px 0 28px;
+  margin-top: 25px;
 }
 
 .checkout-breadcrumb {
@@ -588,6 +587,7 @@
 
 /* ═══ SUCCESS SCREEN ══════════════════════════════════════════════════════════*/
 .order-success-screen {
+  display: none;
   flex-direction: column;
   align-items: center;
   text-align: center;
@@ -649,8 +649,7 @@
 }
 
 @media (max-width: 600px) {
-  .checkout-header { padding: 90px 0 20px; margin-left: 20px ;margin-right: 20px ;margin-bottom: 20px ; }
-  .checkout-card { max-width: 88%; }
+  .checkout-header { padding: 20px 0 20px; }
   .form-row { grid-template-columns: 1fr; }
   .checkout-steps { overflow-x: auto; padding-bottom: 8px; }
   .step-label { display: none; }
@@ -1344,7 +1343,7 @@
   transition: transform .15s, opacity .15s; -webkit-tap-highlight-color: transparent;
 }
 .upi-app-btn:hover { transform: translateY(-2px); opacity: .9; }
-.upi-app-btn img { height: 26px; object-fit: contain; filter: brightness(0) invert(1); }
+.upi-app-btn img { height: 26px; object-fit: contain; }
 .upi-app-name { font-size: 11px; font-weight: 900; letter-spacing: .06em; color: #fff; text-transform: uppercase; }
 .upi-app-tap  { font-size: 9px; color: rgba(255,255,255,.6); letter-spacing: .04em; }
 .upi-app-live { position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 5px #22c55e; }

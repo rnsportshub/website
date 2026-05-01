@@ -80,15 +80,14 @@ body {
 }
 
 .nav-icon{
-  width: 45.6px;
-  height: 45.6px;
-  border-radius: 6px;
-
+  width: 39.2px;
+  height: 39px;
+  border-radius: 8px;
 }
 
 .logo-icon {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   background: var(--accent);
   border-radius: 8px;
   display: flex;
@@ -1941,8 +1940,6 @@ body { overflow-x: hidden; }
 
 /* Fix: policy-section spacing */
 .policy-section {
-  margin-bottom: 32px;
-  padding-bottom: 32px;
   border-bottom: 1px solid var(--border);
 }
 .policy-section:last-child { border-bottom: none; }

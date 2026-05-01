@@ -55,6 +55,17 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ── Search — redirect to shop on Enter ───────────────────────────────
+  const searchInput = document.querySelector('#search-bar input');
+  if (searchInput) {
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const q = searchInput.value.trim();
+        if (q) window.location.href = `shop.html?q=${encodeURIComponent(q)}`;
+      }
+    });
+  }
+
   // ── Scroll Animations ─────────────────────────────────────────────────
   const revealElements = document.querySelectorAll(".reveal");
   const revealObserver = new IntersectionObserver((entries) => {
@@ -178,3 +189,18 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
 });
+
+// ── Homepage category filter ───────────────────────────────────────────────
+// Redirects to shop.html with the selected category pre-applied.
+// The active button style is updated instantly for visual feedback before navigation.
+window.filterProducts = function(category, btn) {
+  // Update active button styling
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  if (category === 'all') {
+    window.location.href = 'shop.html';
+  } else {
+    window.location.href = 'shop.html?category=' + encodeURIComponent(category);
+  }
+};
