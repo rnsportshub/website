@@ -12,11 +12,6 @@
 
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="stylesheet" href="assets/css/checkout.css" />
-  <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<link rel="shortcut icon" href="/favicon.ico" />
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-<link rel="manifest" href="/site.webmanifest" />
 </head>
 <body class="checkout-page">
 
@@ -161,6 +156,10 @@
             <div class="form-group">
               <label class="form-label" for="field-phone">Mobile Number *</label>
               <input class="form-input" id="field-phone" type="tel" placeholder="9876543210" maxlength="10" autocomplete="tel"/>
+            </div>
+            <div class="form-group full">
+              <label class="form-label" for="field-email">Email Address <span style="color:var(--text-muted);font-weight:400;font-size:11px">(optional — for order confirmation)</span></label>
+              <input class="form-input" id="field-email" type="email" placeholder="yourname@gmail.com" autocomplete="email"/>
             </div>
             <div class="form-group full">
               <label class="form-label" for="field-address">Full Address *</label>
@@ -656,6 +655,7 @@
 <script src="assets/js/products.js"></script>
 <script src="assets/js/cart.js"></script>
 <script src="assets/js/app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="assets/js/checkout.js"></script>
 
 

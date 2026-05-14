@@ -275,6 +275,9 @@
     <button class="filter-chip"        data-filter="jerseys" onclick="applyFilter('jerseys',this)">👕 Jerseys</button>
     <button class="filter-chip"        data-filter="studs"   onclick="applyFilter('studs',this)">👟 Studs</button>
     <button class="filter-chip"        data-filter="gear"    onclick="applyFilter('gear',this)">⚽ Gear</button>
+    <div style="width:1px;height:20px;background:rgba(255,255,255,.12);margin:0 4px;flex-shrink:0"></div>
+    <button class="filter-chip"        data-filter="fan"     onclick="applyFilter('fan',this)">👕 Fan Version</button>
+    <button class="filter-chip"        data-filter="player"  onclick="applyFilter('player',this)">⭐ Player Version</button>
   </div>
 
   <!-- Active filter tags (Myntra-style pills) -->
@@ -314,6 +317,24 @@
             <input type="radio" name="cat" value="gear" onchange="applyFromSidebar()">
             <span class="filter-option-label">Accessories</span>
             <span class="filter-option-count" id="fc-gear">—</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-title">Jersey Type</div>
+        <div class="filter-options">
+          <label class="filter-option">
+            <input type="radio" name="jersey-type" value="all" checked onchange="applyFromSidebar()">
+            <span class="filter-option-label">All</span>
+          </label>
+          <label class="filter-option">
+            <input type="radio" name="jersey-type" value="fan" onchange="applyFromSidebar()">
+            <span class="filter-option-label">👕 Fan Version</span>
+          </label>
+          <label class="filter-option">
+            <input type="radio" name="jersey-type" value="player" onchange="applyFromSidebar()">
+            <span class="filter-option-label">⭐ Player Version</span>
           </label>
         </div>
       </div>
