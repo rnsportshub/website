@@ -78,11 +78,12 @@ function buildShopCard(p) {
     ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100) : 0;
   const isOOS = p.stock === 0;
   const pid   = String(p.id);
+  const src   = (typeof optimiseImg === 'function') ? optimiseImg(imgs[0], 400) : imgs[0];
 
   return `<div class="product-card${isOOS ? ' out-of-stock' : ''}">
     <a href="product.html?id=${pid}" class="product-card-link" style="display:block;text-decoration:none;color:inherit">
       <div class="product-image-wrap">
-        <img src="${imgs[0]}" alt="${p.name}" loading="lazy"
+        <img src="${src}" alt="${p.name}" loading="lazy"
           onerror="this.src='https://placehold.co/400x400/111/00ff88?text=RN'">
         ${p.badge ? `<span class="product-badge badge-${(p.badge||'').toLowerCase().replace(/\s+/g,'')}">${p.badge}</span>` : ''}
         ${disc > 0 ? `<span class="product-discount">-${disc}%</span>` : ''}

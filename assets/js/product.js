@@ -84,14 +84,14 @@ function renderProductDetail(p) {
           ${p.badge ? `<div class="product-main-badge"><span class="product-badge badge-${(p.badge||'').toLowerCase().replace(/\s+/g,'')}">${p.badge}</span></div>` : ''}
           ${discount > 0 ? `<div class="product-main-discount">-${discount}% OFF</div>` : ''}
           ${isOOS ? `<div class="product-oos-overlay">Out of Stock</div>` : ''}
-          <img id="main-product-img" src="${imgs[0]}" alt="${p.name}"
+          <img id="main-product-img" src="${optimiseImg ? optimiseImg(imgs[0], 800) : imgs[0]}" alt="${p.name}"
             onerror="this.src='https://placehold.co/600x600/111/00ff88?text=RN'"/>
           <div class="zoom-hint-overlay">🔍 Click to zoom</div>
         </div>
         <div class="product-thumbnails" id="product-thumbs">
           ${imgs.map((src, i) => `
             <div class="product-thumb ${i===0?'active':''}" onclick="switchThumb(this,'${src}',${i})">
-              <img src="${src}" alt="" loading="lazy" onerror="this.src='https://placehold.co/100x100/111/00ff88?text=RN'"/>
+              <img src="${optimiseImg ? optimiseImg(src, 120) : src}" alt="" loading="lazy" onerror="this.src='https://placehold.co/100x100/111/00ff88?text=RN'"/>
             </div>`).join('')}
         </div>
       </div>
@@ -251,8 +251,15 @@ function handleBuyNow() {
 function shakeSize() {
   const el = document.getElementById('size-options');
   if (!el) return;
+  // Shake animation
   el.style.animation = 'none'; void el.offsetWidth;
   el.style.animation = 'pdpShake .4s ease';
+  // Red border pulse to make it obvious
+  el.style.outline = '2px solid #ff4444';
+  el.style.borderRadius = '6px';
+  setTimeout(() => { el.style.outline = ''; el.style.borderRadius = ''; }, 1800);
+  // Scroll size selector into view on mobile
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function showToast(msg, type) {
@@ -302,7 +309,7 @@ function updateLightboxImage() {
   if (img) img.src = _lightboxImgs[_lightboxIdx];
   if (ctr) ctr.textContent = `${_lightboxIdx+1} / ${_lightboxImgs.length}`;
   if (thumbs) thumbs.innerHTML = _lightboxImgs.map((src,i) =>
-    `<div class="lb-thumb${i===_lightboxIdx?' active':''}" onclick="lightboxGoTo(${i})"><img src="${src}" loading="lazy"/></div>`
+    `<div class="lb-thumb${i===_lightboxIdx?' active':''}" onclick="lightboxGoTo(${i})"><img src="${optimiseImg ? optimiseImg(src, 120) : src}" loading="lazy"/></div>`
   ).join('');
 }
 
@@ -480,7 +487,7 @@ function renderRelatedProducts(p) {
     const outOfStock = Number(x.stock) === 0;
     return `<div class="product-card" style="cursor:pointer">
       <div class="product-image-wrap" onclick="window.location='product.html?id=${x.id}'">
-        <img src="${imgs[0]}" alt="${x.name}" loading="lazy" onerror="this.src='https://placehold.co/400x400/111/00ff88?text=RN'">
+        <img src="${optimiseImg ? optimiseImg(imgs[0], 400) : imgs[0]}" alt="${x.name}" loading="lazy" onerror="this.src='https://placehold.co/400x400/111/00ff88?text=RN'">
         ${x.badge?`<span class="product-badge badge-${(x.badge||'').toLowerCase().replace(/\s+/g,'')}">${x.badge}</span>`:''}
         ${disc>0?`<span class="product-discount">-${disc}%</span>`:''}
       </div>

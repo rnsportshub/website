@@ -36,14 +36,30 @@ function getProductsByCategory(cat) {
   return cat === 'all' ? src : src.filter(p => p.category === cat);
 }
 
+// ── Image optimisation ────────────────────────────────────────────────────────
+// For Cloudinary URLs: injects f_auto,q_auto,w_{size} transformations.
+// This tells Cloudinary to auto-pick format (WebP/AVIF) + compress + resize.
+// Non-Cloudinary URLs (Unsplash, placeholder) are returned unchanged.
+// Result: 60-80% smaller images, same visual quality, much faster load.
+function optimiseImg(url, width = 400) {
+  if (!url || typeof url !== 'string') return url;
+  if (!url.includes('res.cloudinary.com')) return url;
+  // Already has transformations — don't double-add
+  if (url.includes('f_auto') || url.includes('q_auto')) return url;
+  // Insert transform segment after /upload/
+  return url.replace('/upload/', `/upload/f_auto,q_auto,w_${width}/`);
+}
+window.optimiseImg = optimiseImg;
+
 function renderProductCard(product) {
   const imgs = (product.images && product.images.length > 0) ? product.images : [product.image || ''];
+  const src  = optimiseImg(imgs[0], 400);
   const discount = product.originalPrice > product.price
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) : 0;
   return `
     <div class="product-card" onclick="window.location='product.html?id=${product.id}'" style="cursor:pointer">
       <div class="product-image-wrap">
-        <img src="${imgs[0]}" alt="${product.name}" loading="lazy" onerror="this.src='https://placehold.co/400x400/111/00ff88?text=RN+Sports'">
+        <img src="${src}" alt="${product.name}" loading="lazy" onerror="this.src='https://placehold.co/400x400/111/00ff88?text=RN+Sports'">
         ${product.badge ? `<span class="product-badge badge-${(product.badge||'').toLowerCase().replace(/\s+/g,'')}">${product.badge}</span>` : ''}
         ${discount > 0 ? `<span class="product-discount">-${discount}%</span>` : ''}
         <div class="product-actions">

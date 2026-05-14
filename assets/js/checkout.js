@@ -19,6 +19,12 @@ function getCartWithDetails() {
 
 const UPI_ID     = 'Q222702378@ybl';
 const WA_NUMBER  = '917439001021';
+
+// ── EmailJS config ────────────────────────────────────────────────────────────
+const EMAILJS_PUBLIC_KEY        = 'qU3nMCX3Z1qA9V7Qv';
+const EMAILJS_SERVICE_ID        = 'service_7g3aj9p';
+const EMAILJS_ADMIN_TEMPLATE    = 'template_555f4dx'; // → rnsportshub@gmail.com
+const EMAILJS_CUSTOMER_TEMPLATE = 'template_w7qngau'; // → customer email
 const STORE_NAME = 'RN Sports Hub';
 
 let selectedPaymentMethod = 'upi';
@@ -300,6 +306,7 @@ window.placeOrder = function() {
   const get = id => document.getElementById(id)?.value.trim() || '';
   const name    = get('field-name');
   const phone   = get('field-phone');
+  const email   = get('field-email'); // optional
   const address = get('field-address');
   const city    = get('field-city');
   const pincode = get('field-pincode');
@@ -322,7 +329,7 @@ window.placeOrder = function() {
   const orderId = generateOrderId();
 
   _pendingOrderData = {
-    orderId, name, phone,
+    orderId, name, phone, email,
     address: `${address}, ${city}, ${state} - ${pincode}`,
     notes,
     items: cart.map(item => {
@@ -538,8 +545,70 @@ async function saveOrderToFirebase(screenshotUrl) {
   // Clear cart
   if (typeof clearCart === 'function') clearCart();
 
+  // Send email notifications (non-blocking — don't fail order if email fails)
+  sendOrderEmails(_pendingOrderData).catch(e => console.warn('[EmailJS] Notification failed:', e));
+
   showSuccessScreen(_pendingOrderMeta);
   showToast('Order placed! ✓');
+}
+
+
+// ── EmailJS notification ──────────────────────────────────────────────────────
+// Fires after every successful order save.
+// Sends two emails:
+//   1. Admin notification → rnsportshub@gmail.com (always)
+//   2. Customer confirmation → customer email (only if provided)
+async function sendOrderEmails(d) {
+  if (!window.emailjs) { console.warn('[EmailJS] SDK not loaded'); return; }
+
+  // Init EmailJS (safe to call multiple times)
+  window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+
+  // Build items string
+  const itemsText = (d.items || []).map(i =>
+    `${i.name}${i.size ? ' (' + i.size + ')' : ''} x${i.qty} = Rs.${(i.price * i.qty).toLocaleString('en-IN')}`
+  ).join('\n');
+
+  const isCod     = d.payment === 'cod';
+  const subtotal  = (d.amount || 0) - SHIPPING_FEE + (d.discount || 0);
+  const now       = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
+
+  const params = {
+    order_id:         d.orderId   || '—',
+    date:             now,
+    payment_method:   isCod ? 'Cash on Delivery (COD)' : 'UPI / Online',
+    customer_name:    d.name      || '—',
+    customer_phone:   d.phone     || '—',
+    customer_email:   d.email     || 'Not provided',
+    customer_address: d.address   || '—',
+    items:            itemsText   || '—',
+    subtotal:         subtotal.toLocaleString('en-IN'),
+    shipping:         SHIPPING_FEE.toLocaleString('en-IN'),
+    discount:         (d.discount || 0).toLocaleString('en-IN'),
+    total:            (d.amount   || 0).toLocaleString('en-IN'),
+    cod_advance:      isCod ? (d.codAdvanceAmount || 0).toLocaleString('en-IN') : '0',
+    cod_remaining:    isCod ? Math.max(0, (d.amount || 0) - (d.codAdvanceAmount || 0)).toLocaleString('en-IN') : '0',
+    notes:            d.notes     || 'None',
+  };
+
+  // 1. Admin notification — always send
+  try {
+    await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_ADMIN_TEMPLATE, params);
+    console.log('[EmailJS] Admin notification sent ✓');
+  } catch (err) {
+    console.warn('[EmailJS] Admin notification failed:', err);
+  }
+
+  // 2. Customer confirmation — only if email provided and looks valid
+  const customerEmail = (d.email || '').trim();
+  if (customerEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+    try {
+      await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_CUSTOMER_TEMPLATE, params);
+      console.log('[EmailJS] Customer confirmation sent ✓');
+    } catch (err) {
+      console.warn('[EmailJS] Customer confirmation failed:', err);
+    }
+  }
 }
 
 function buildWAMessage(d) {
