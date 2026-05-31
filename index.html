@@ -988,12 +988,15 @@
 <script type="module">
   import { db } from './assets/js/firebase.js';
   import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+  // Show skeleton cards immediately while Firebase loads
+  if (typeof renderSkeletons === 'function') renderSkeletons('featured-products-grid', 8);
+
   try {
     const snap = await getDocs(collection(db, 'products'));
     if (!snap.empty) {
       window.PRODUCTS = snap.docs.map(d => {
         const data = d.data();
-        // Normalise fields so renderProductCard always works correctly
         if (!data.images && data.image) data.images = [data.image];
         if (!Array.isArray(data.images))  data.images = [];
         data.price         = Number(data.price)         || 0;
@@ -1004,9 +1007,15 @@
       console.log('[Firebase] Products loaded:', window.PRODUCTS.length);
       window.dispatchEvent(new CustomEvent('productsLoaded', { detail: { count: window.PRODUCTS.length } }));
       if (typeof renderFeaturedProducts === 'function') renderFeaturedProducts();
+    } else {
+      // Firestore empty — clear skeletons
+      const grid = document.getElementById('featured-products-grid');
+      if (grid) grid.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:40px 0">No products available yet.</p>';
     }
   } catch(e) {
-    console.warn('[Firebase] Product load failed (using static fallback):', e.message);
+    console.warn('[Firebase] Product load failed:', e.message);
+    const grid = document.getElementById('featured-products-grid');
+    if (grid) grid.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:40px 0">Could not load products — please refresh.</p>';
   }
 </script>
 
