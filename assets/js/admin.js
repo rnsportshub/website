@@ -244,8 +244,80 @@ async function loadOrders() {
     const badge = document.getElementById('orders-badge');
     if (badge) { badge.textContent = allOrders.length; badge.style.display = allOrders.length ? 'inline-block' : 'none'; }
     console.log('[Admin] Orders:', allOrders.length);
+
+    // ── Check for localStorage fallback orders (saved when Firestore was unavailable)
+    checkLocalFallbackOrders();
   } catch (err) { console.error('[Admin] loadOrders:', err.message); }
 }
+
+// Shows a banner if there are unsynced orders saved to localStorage during Firebase outages.
+// Admin can click "Sync Now" to push them to Firestore.
+function checkLocalFallbackOrders() {
+  try {
+    const raw = localStorage.getItem('rn_orders');
+    if (!raw) return;
+    const localOrders = JSON.parse(raw).filter(o => o._localFallback);
+    if (!localOrders.length) return;
+
+    // Show recovery banner in admin UI
+    const existing = document.getElementById('local-order-recovery-banner');
+    if (existing) return; // already shown
+
+    const banner = document.createElement('div');
+    banner.id = 'local-order-recovery-banner';
+    banner.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;background:#1a1a1a;border:1px solid rgba(239,159,39,.5);border-left:3px solid #EF9F27;border-radius:10px;padding:14px 18px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.6)';
+    banner.innerHTML = `
+      <div style="font-family:var(--font-cond,monospace);font-weight:700;font-size:13px;color:#EF9F27;margin-bottom:4px">⚠ ${localOrders.length} unsynced order${localOrders.length>1?'s':''} found</div>
+      <div style="font-size:12px;color:#aaa;margin-bottom:12px">These orders were saved locally when Firestore was unavailable. Sync them now to make them visible in the admin panel.</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="syncLocalOrders()" style="background:#EF9F27;color:#000;border:none;border-radius:6px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">Sync Now (${localOrders.length})</button>
+        <button onclick="this.closest('#local-order-recovery-banner').remove()" style="background:transparent;color:#666;border:1px solid #333;border-radius:6px;padding:8px 14px;font-size:12px;cursor:pointer">Dismiss</button>
+      </div>`;
+    document.body.appendChild(banner);
+    console.warn('[Admin] Found', localOrders.length, 'unsynced local order(s)');
+  } catch(e) { console.warn('[Admin] checkLocalFallbackOrders error:', e); }
+}
+
+window.syncLocalOrders = async function() {
+  const banner = document.getElementById('local-order-recovery-banner');
+  const btn = banner?.querySelector('button');
+  if (btn) { btn.disabled = true; btn.textContent = 'Syncing…'; }
+
+  try {
+    const raw = localStorage.getItem('rn_orders');
+    if (!raw) return;
+    const localOrders = JSON.parse(raw).filter(o => o._localFallback);
+
+    let synced = 0;
+    for (const order of localOrders) {
+      try {
+        const { _localFallback, date, id: _id, ...orderData } = order;
+        await addDoc(collection(db, 'orders'), {
+          ...orderData,
+          createdAt: serverTimestamp(),
+          _syncedFromLocal: true,
+          _originalLocalDate: date || null,
+        });
+        synced++;
+      } catch(e) {
+        console.error('[Admin] Failed to sync order:', order.orderId, e.message);
+      }
+    }
+
+    // Remove synced orders from localStorage
+    const remaining = JSON.parse(localStorage.getItem('rn_orders') || '[]').filter(o => !o._localFallback);
+    localStorage.setItem('rn_orders', JSON.stringify(remaining));
+
+    if (banner) banner.remove();
+    showToast(`${synced} order${synced!==1?'s':''} synced to Firestore ✓`);
+    await loadOrders(); // Refresh orders list
+    renderOrders();
+  } catch(e) {
+    console.error('[Admin] syncLocalOrders error:', e);
+    showToast('Sync failed — check your connection.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Retry'; }
+  }
+};
 
 async function loadCoupons() {
   try {

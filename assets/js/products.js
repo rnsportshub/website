@@ -1,38 +1,53 @@
-// ── RN Sports Hub — Products v3 (Static + Firebase upgrade)
-// This file runs as a regular <script> (not module).
-// Static products are available immediately.
-// Firebase upgrade happens via inline module script in each HTML page.
+// ── RN Sports Hub — Products
+// Static product array removed — all products come from Firestore.
+// window.PRODUCTS starts empty; Firebase loader overwrites it on each page.
+// Skeleton cards show while Firebase loads so customers never see blank screens.
 
-// ── Static product data (immediate fallback) ──────────────────────────────────
-const products = [
-  { id: 1, name: "Real Madrid Home Jersey 24/25", category: "jerseys", type: "fan", brand: "Adidas", price: 699, originalPrice: 999, badge: "HOT", images: ["https://images.unsplash.com/photo-1489944440615-453fc2b6a9a9?w=600&q=80"], sizes: ["S","M","L","XL","XXL"], team: "Real Madrid", description: "Official fan version Real Madrid home jersey for the 2024/25 season. Breathable fabric, club badge, sponsor logos.", stock: 15, featured: true },
-  { id: 2, name: "Barcelona Away Jersey 24/25", category: "jerseys", type: "fan", brand: "Nike", price: 699, originalPrice: 999, badge: "NEW", images: ["https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=600&q=80"], sizes: ["S","M","L","XL","XXL"], team: "Barcelona", description: "Barcelona away kit for 2024/25 season. Premium quality fan version jersey.", stock: 12, featured: true },
-  { id: 3, name: "Manchester City Home Jersey", category: "jerseys", type: "player", brand: "Puma", price: 1299, originalPrice: 1799, badge: "PLAYER VERSION", images: ["https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&q=80"], sizes: ["S","M","L","XL"], team: "Manchester City", description: "Player version jersey with Dri-FIT ADV technology. Same as worn on the pitch.", stock: 8, featured: false },
-  { id: 4, name: "Nike Mercurial Vapor 15", category: "studs", type: "fg", brand: "Nike", price: 2499, originalPrice: 3499, badge: "BESTSELLER", images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80"], sizes: ["6","7","8","9","10","11"], team: null, description: "Speed boot designed for fast attackers. Lightweight, grippy FG outsole for firm ground.", stock: 6, featured: true },
-  { id: 5, name: "Adidas Predator Accuracy.3", category: "studs", type: "fg", brand: "Adidas", price: 1999, originalPrice: 2799, badge: "HOT", images: ["https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=600&q=80"], sizes: ["6","7","8","9","10","11"], team: null, description: "Control-focused boot with HYBRIDTOUCH upper for precise passing and shooting.", stock: 10, featured: false },
-  { id: 6, name: "Argentina Home Jersey 2024", category: "jerseys", type: "fan", brand: "Adidas", price: 799, originalPrice: 1099, badge: "SALE", images: ["https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=600&q=80"], sizes: ["S","M","L","XL","XXL"], team: "Argentina", description: "2024 Argentina national team home jersey. Celebrate with the world champions.", stock: 20, featured: true },
-  { id: 7, name: "Goalkeeper Gloves Pro", category: "gear", type: "accessory", brand: "Adidas", price: 449, originalPrice: 649, badge: "NEW", images: ["https://images.unsplash.com/photo-1547347298-4074fc3086f0?w=600&q=80"], sizes: ["S","M","L","XL"], team: null, description: "Grip-enhanced goalkeeper gloves with finger protection. Suitable for training and matches.", stock: 25, featured: false },
-  { id: 8, name: "PSG Home Jersey 24/25", category: "jerseys", type: "fan", brand: "Nike", price: 699, originalPrice: 999, badge: "NEW", images: ["https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600&q=80"], sizes: ["S","M","L","XL","XXL"], team: "PSG", description: "Paris Saint-Germain home jersey for the 2024/25 season.", stock: 18, featured: false },
-  { id: 9, name: "Mizuno Morelia Neo III", category: "studs", type: "fg", brand: "Mizuno", price: 3299, originalPrice: 4499, badge: "PREMIUM", images: ["https://images.unsplash.com/photo-1556906781-9a412961a28c?w=600&q=80"], sizes: ["6","7","8","9","10"], team: null, description: "Japanese craftsmanship at its finest. K-leather upper for unmatched touch and comfort.", stock: 4, featured: false },
-  { id: 10, name: "Training Football (Size 5)", category: "gear", type: "ball", brand: "Nike", price: 599, originalPrice: 799, badge: "BESTSELLER", images: ["https://images.unsplash.com/photo-1598971861713-54ad16a7e72e?w=600&q=80"], sizes: ["Size 5"], team: null, description: "High-durability match football. 32-panel construction for consistent flight.", stock: 30, featured: true },
-  { id: 11, name: "Brazil Home Jersey 2024", category: "jerseys", type: "fan", brand: "Nike", price: 799, originalPrice: 1099, badge: "HOT", images: ["https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=600&q=80"], sizes: ["S","M","L","XL","XXL"], team: "Brazil", description: "Brazil national team home jersey. The iconic yellow and green.", stock: 22, featured: true },
-  { id: 12, name: "Shin Guards Pro Elite", category: "gear", type: "protection", brand: "Adidas", price: 349, originalPrice: 499, badge: "SALE", images: ["https://images.unsplash.com/photo-1599058917765-a780eda07a3e?w=600&q=80"], sizes: ["S","M","L"], team: null, description: "Lightweight carbon-fibre shin guards with ankle support. Approved for competitive play.", stock: 40, featured: false }
-];
+// ── Empty on start — Firebase fills this ──────────────────────────────────────
+window.PRODUCTS = [];
 
-// ── Set static products immediately (zero delay) ──────────────────────────────
-window.PRODUCTS = products;
+// ── Skeleton loading cards ────────────────────────────────────────────────────
+// Shows animated placeholder cards while Firebase fetches real products.
+// Call renderSkeletons(containerId, count) before the Firebase load starts.
+function renderSkeletons(containerId, count = 8) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const card = `
+    <div class="skeleton-card" style="
+      background:var(--bg-2,#111);border-radius:12px;overflow:hidden;
+      animation:skeletonPulse 1.5s ease-in-out infinite alternate">
+      <div style="height:220px;background:var(--bg-3,#1a1a1a)"></div>
+      <div style="padding:12px;display:flex;flex-direction:column;gap:8px">
+        <div style="height:10px;width:40%;background:var(--bg-3,#1a1a1a);border-radius:4px"></div>
+        <div style="height:14px;width:80%;background:var(--bg-3,#1a1a1a);border-radius:4px"></div>
+        <div style="height:14px;width:60%;background:var(--bg-3,#1a1a1a);border-radius:4px"></div>
+        <div style="height:36px;background:var(--bg-3,#1a1a1a);border-radius:6px;margin-top:4px"></div>
+      </div>
+    </div>`;
+  container.innerHTML = Array(count).fill(card).join('');
+}
+window.renderSkeletons = renderSkeletons;
+
+// Inject skeleton keyframe animation once
+(function() {
+  const s = document.createElement('style');
+  s.textContent = `@keyframes skeletonPulse{from{opacity:.6}to{opacity:1}}`;
+  document.head.appendChild(s);
+})();
+
+
 
 // ── Helper functions ──────────────────────────────────────────────────────────
 function getProductById(id) {
-  return (window.PRODUCTS || products).find(p => String(p.id) === String(id)) || null;
+  return (window.PRODUCTS || []).find(p => String(p.id) === String(id)) || null;
 }
 
 function getFeaturedProducts() {
-  return (window.PRODUCTS || products).filter(p => p.featured === true || ['HOT','BESTSELLER','NEW'].includes(p.badge)).slice(0, 8);
+  return (window.PRODUCTS || []).filter(p => p.featured === true || ['HOT','BESTSELLER','NEW'].includes(p.badge)).slice(0, 8);
 }
 
 function getProductsByCategory(cat) {
-  const src = window.PRODUCTS || products;
+  const src = window.PRODUCTS || [];
   return cat === 'all' ? src : src.filter(p => p.category === cat);
 }
 
@@ -91,11 +106,12 @@ function renderFeaturedProducts() {
 // that loads all products from Firestore on page load.
 //
 // Flow:
-//   1. This file sets window.PRODUCTS = static products array immediately (zero delay).
-//   2. The inline module script fetches Firestore, normalises fields, and overwrites
-//      window.PRODUCTS with live data.
-//   3. It fires: window.dispatchEvent(new CustomEvent('productsLoaded'))
-//   4. shop.js and product.js both listen for this event and re-render automatically.
+//   1. This file sets window.PRODUCTS = [] immediately.
+//   2. renderSkeletons() shows animated placeholder cards while Firebase loads.
+//   3. The inline module script fetches Firestore, normalises fields, and
+//      overwrites window.PRODUCTS with live data.
+//   4. It fires: window.dispatchEvent(new CustomEvent('productsLoaded'))
+//   5. shop.js, product.js, and renderFeaturedProducts() re-render with real data.
 //
-// Result: page shows static products instantly, then silently upgrades to live data.
-// If Firebase fails, the static fallback stays — no blank screens.
+// Result: customers see skeleton loaders instantly, then real products appear.
+// No wrong/placeholder images ever shown.

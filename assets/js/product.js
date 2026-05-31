@@ -534,4 +534,31 @@ document.head.appendChild(_s);
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', initProductPage);
-window.addEventListener('productsLoaded', () => { if (!currentProduct) initProductPage(); });
+
+// Re-render when Firebase loads — even if static product already rendered.
+// This fixes the bug where static products.js has placeholder images
+// but the real product with correct images is in Firestore.
+window.addEventListener('productsLoaded', () => {
+  const id = new URLSearchParams(window.location.search).get('id');
+  if (!id) return;
+
+  const freshSrc = window.PRODUCTS || [];
+  const freshP   = freshSrc.find(x => String(x.id) === String(id));
+
+  if (!freshP) return; // product not in Firestore — keep whatever is showing
+
+  // Only re-render if the data actually changed (avoid unnecessary flicker)
+  const hasNewImage = freshP.images && freshP.images.length &&
+    freshP.images[0] !== (currentProduct?.images?.[0]);
+  const hasNewPrice = freshP.price !== currentProduct?.price;
+  const hasNewStock = freshP.stock !== currentProduct?.stock;
+  const isNewProduct = !currentProduct;
+
+  if (isNewProduct || hasNewImage || hasNewPrice || hasNewStock) {
+    currentProduct = freshP;
+    renderProductDetail(freshP);
+    renderRelatedProducts(freshP);
+    updateMeta(freshP);
+    console.log('[Product] Re-rendered with Firestore data:', freshP.name);
+  }
+});

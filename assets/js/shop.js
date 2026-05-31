@@ -174,6 +174,14 @@ function _renderPage(filtered) {
   const noRes = document.getElementById('no-results');
   if (!grid) return;
 
+  // Firebase not loaded yet — show skeletons
+  if (!window.PRODUCTS || window.PRODUCTS.length === 0) {
+    if (typeof renderSkeletons === 'function') renderSkeletons('shop-products-grid', 12);
+    if (noRes) noRes.style.display = 'none';
+    _renderPagination(0);
+    return;
+  }
+
   if (!filtered.length) {
     grid.innerHTML = '';
     if (noRes) noRes.style.display = 'block';
