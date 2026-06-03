@@ -27,11 +27,6 @@ const EMAILJS_ADMIN_TEMPLATE    = 'template_555f4dx'; // → rnsportshub@gmail.c
 const EMAILJS_CUSTOMER_TEMPLATE = 'template_w7qngau'; // → customer email
 const STORE_NAME = 'RN Sports Hub';
 
-// ── Shipping + COD advance (moved to top — used by functions throughout file) ─
-const SHIPPING_FEE        = 100; // ₹100 flat on every order
-const COD_ADVANCE_MAP     = { jerseys: 100, studs: 500 };
-const COD_ADVANCE_DEFAULT = 200;
-
 let selectedPaymentMethod = 'upi';
 let _pendingOrderData     = null;
 let _pendingOrderMeta     = null;
@@ -427,13 +422,7 @@ window.placeOrder = function() {
 
   setStep(2);
   showScreen('payment');
-  // Persist full order data to sessionStorage so page reloads don't lose it
-  try {
-    sessionStorage.setItem('rn_pending_order_data', JSON.stringify(_pendingOrderData));
-    sessionStorage.setItem('rn_pending_order_meta', JSON.stringify(_pendingOrderMeta));
-    sessionStorage.setItem('rn_pending_payment_method', selectedPaymentMethod);
-  } catch(e) { console.warn('[Checkout] sessionStorage unavailable:', e.message); }
-  localStorage.setItem('rn_pending_order', _pendingOrderData.orderId);
+  localStorage.setItem('rn_pending_order', orderId);
 };
 
 function toggleCodMode(isCod) {
@@ -538,10 +527,7 @@ window.placeCodOrder = async function() {
 async function saveOrderToFirebase(screenshotUrl) {
   const btn      = document.getElementById('screenshot-upload-btn');
   const statusEl = document.getElementById('screenshot-status');
-
   let savedToFirestore = false;
-
-  // ── Attempt Firestore save ────────────────────────────────────────────────
   try {
     const { db } = await import('./firebase.js');
     const { collection, addDoc, serverTimestamp } =
@@ -550,36 +536,26 @@ async function saveOrderToFirebase(screenshotUrl) {
       ..._pendingOrderData, screenshot: screenshotUrl, createdAt: serverTimestamp()
     });
     savedToFirestore = true;
-    console.log('[Checkout] Order saved to Firestore ✓');
-  } catch (err) {
-    console.warn('[Checkout] Firestore save failed:', err.message);
-    // Fallback: save to localStorage so order is not lost
-    try {
-      const orders = JSON.parse(localStorage.getItem('rn_orders') || '[]');
-      orders.unshift({ ..._pendingOrderData, screenshot: screenshotUrl, date: new Date().toISOString(), _localFallback: true });
-      localStorage.setItem('rn_orders', JSON.stringify(orders));
-      console.warn('[Checkout] Order saved to localStorage fallback.');
-    } catch(le) { console.error('[Checkout] localStorage fallback also failed:', le); }
+    console.log('[Checkout] Order saved to Firebase ✓');
 
-    // Show a warning — don't silently fail
+    // Auto-decrement product stock — non-blocking, runs after order confirms
+    decrementStock(_pendingOrderData.items, db).catch(e =>
+      console.warn('[Stock] Decrement failed (non-critical):', e.message)
+    );
+  } catch (err) {
+    console.warn('[Checkout] Firebase unavailable — saving to localStorage:', err.message);
+    const orders = JSON.parse(localStorage.getItem('rn_orders') || '[]');
+    orders.unshift({ ..._pendingOrderData, screenshot: screenshotUrl, date: new Date().toISOString(), _localFallback: true });
+    localStorage.setItem('rn_orders', JSON.stringify(orders));
     showToast('Order saved locally — check your internet connection.', 'error');
   }
 
-  // ── Clear cart + sessionStorage ───────────────────────────────────────────
+  // Clear cart
   if (typeof clearCart === 'function') clearCart();
-  try {
-    sessionStorage.removeItem('rn_pending_order_data');
-    sessionStorage.removeItem('rn_pending_order_meta');
-    sessionStorage.removeItem('rn_pending_payment_method');
-    localStorage.removeItem('rn_pending_order');
-  } catch(e) {}
 
-  // ── Send email notifications ONLY if Firestore save succeeded ────────────
-  // If Firebase failed, we don't send email to avoid false confirmations.
+  // Send email only after confirmed Firestore save
   if (savedToFirestore) {
     sendOrderEmails(_pendingOrderData).catch(e => console.warn('[EmailJS] Notification failed:', e));
-  } else {
-    console.warn('[EmailJS] Skipping email — order was not confirmed in Firestore.');
   }
 
   showSuccessScreen(_pendingOrderMeta);
@@ -587,23 +563,44 @@ async function saveOrderToFirebase(screenshotUrl) {
 }
 
 
+// ── Auto stock decrement ──────────────────────────────────────────────────────
+// Called after every confirmed Firestore order save.
+// Reduces stock of each ordered product by the quantity ordered.
+// If stock reaches 0, product automatically shows as Out of Stock on site.
+// Uses a transaction-like approach: reads current stock then writes new value.
+// Non-blocking — order success screen shows immediately while this runs.
+async function decrementStock(items, db) {
+  if (!items || !items.length) return;
+
+  const { doc, getDoc, updateDoc, serverTimestamp } =
+    await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+
+  for (const item of items) {
+    if (!item.id) continue;
+    try {
+      const ref      = doc(db, 'products', String(item.id));
+      const snap     = await getDoc(ref);
+      if (!snap.exists()) continue;
+
+      const current  = Number(snap.data().stock) || 0;
+      const ordered  = Number(item.qty) || 1;
+      const newStock = Math.max(0, current - ordered); // never go below 0
+
+      await updateDoc(ref, { stock: newStock, updatedAt: serverTimestamp() });
+      console.log(`[Stock] ${item.name}: ${current} → ${newStock}`);
+    } catch(e) {
+      console.warn(`[Stock] Failed for product ${item.id}:`, e.message);
+    }
+  }
+}
+
 // ── EmailJS notification ──────────────────────────────────────────────────────
 // Fires after every successful order save.
 // Sends two emails:
 //   1. Admin notification → rnsportshub@gmail.com (always)
 //   2. Customer confirmation → customer email (only if provided)
 async function sendOrderEmails(d) {
-  // Wait for EmailJS SDK to load (handles slow CDN or race conditions)
-  if (!window.emailjs) {
-    await new Promise((resolve, reject) => {
-      let waited = 0;
-      const check = setInterval(() => {
-        waited += 100;
-        if (window.emailjs) { clearInterval(check); resolve(); }
-        else if (waited >= 5000) { clearInterval(check); reject(new Error('EmailJS SDK not loaded after 5s')); }
-      }, 100);
-    });
-  }
+  if (!window.emailjs) { console.warn('[EmailJS] SDK not loaded'); return; }
 
   // Init EmailJS (safe to call multiple times)
   window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
@@ -728,58 +725,8 @@ document.head.appendChild(_spinStyle);
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // ── Restore pending order if page was reloaded mid-payment ──────────────────
-  // This fixes the bug where Android Chrome reloads the page when returning from
-  // a UPI app, wiping _pendingOrderData from memory.
-  try {
-    const savedData   = sessionStorage.getItem('rn_pending_order_data');
-    const savedMeta   = sessionStorage.getItem('rn_pending_order_meta');
-    const savedMethod = sessionStorage.getItem('rn_pending_payment_method');
-
-    if (savedData && savedMeta) {
-      _pendingOrderData     = JSON.parse(savedData);
-      _pendingOrderMeta     = JSON.parse(savedMeta);
-      selectedPaymentMethod = savedMethod || 'upi';
-
-      // Restore UPI button hrefs so they work immediately on return
-      if (_pendingOrderData.orderId && _pendingOrderData.amount) {
-        setUpiButtonHrefs(_pendingOrderData.amount, _pendingOrderData.orderId);
-      }
-
-      // Restore payment screen display
-      const safeSet = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-      safeSet('s-name',   _pendingOrderData.name);
-      const isCodRestore = selectedPaymentMethod === 'cod';
-      if (isCodRestore) {
-        const adv = _pendingOrderData.codAdvanceAmount || calcCodAdvance();
-        safeSet('s-amount', fmt(adv));
-        setCodUpiButtonHrefs(_pendingOrderData.orderId);
-        // Restore remaining amount
-        const remEl = document.getElementById('cod-remaining-amount');
-        if (remEl) remEl.textContent = '₹' + Math.max(0, (_pendingOrderData.amount || 0) - adv).toLocaleString('en-IN');
-        // Update advance labels
-        ['cod-advance-amount','cod-amount-box-value','cod-qr-amount'].forEach(id => {
-          const el = document.getElementById(id); if (el) el.textContent = fmt(adv);
-        });
-      } else {
-        safeSet('s-amount', fmt(_pendingOrderData.amount));
-      }
-
-      // Rebuild WA notify link
-      const waMsg = buildWAMessage(_pendingOrderData);
-      const waPayBtn = document.getElementById('wa-notify-btn-payment');
-      if (waPayBtn) waPayBtn.href = `https://wa.me/${WA_NUMBER}?text=${waMsg}`;
-
-      toggleCodMode(isCodRestore);
-      setStep(2);
-      showScreen('payment');
-      console.log('[Checkout] Restored pending order from sessionStorage:', _pendingOrderData.orderId);
-    }
-  } catch(e) {
-    console.warn('[Checkout] Could not restore pending order:', e.message);
-  }
-
   renderSummary();
+
   document.getElementById('screenshot-file-input')?.addEventListener('change', function() {
     handleScreenshotChange(this);
   });
@@ -787,7 +734,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.addEventListener('productsLoaded', () => { renderSummary && renderSummary(); });
 
-
+// ── Shipping fee ─────────────────────────────────────────────────────────────
+const SHIPPING_FEE = 100; // ₹100 flat shipping on every order
+// Jerseys: ₹100 · Studs: ₹500 · Everything else: ₹200
+// Rule: take the HIGHEST advance from all items in cart
+const COD_ADVANCE_MAP = { jerseys: 100, studs: 500 };
+const COD_ADVANCE_DEFAULT = 200;
 
 function calcCodAdvance() {
   const cart = (typeof getCart === 'function') ? getCart() : [];
