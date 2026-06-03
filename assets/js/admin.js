@@ -1,10 +1,3 @@
-// ============================================================
-// RN SPORTS HUB — Admin Panel v2 (PSJH Replica)
-// ============================================================
-// Sections: Login, Sidebar, Toast, Nav, Loaders, Dashboard,
-//           Orders, Products, Images, Save/Edit/Delete,
-//           Reviews, Bulk Upload, Coupons, Enquiries, Init
-
 import { db, auth } from './firebase.js';
 import { uploadMultipleToCloudinary } from './cloudinary.js';
 import {
@@ -390,24 +383,60 @@ window.deleteOrder = async function() {
 // ============================================================
 // SECTION 9: PRODUCTS
 // ============================================================
-window.renderAdminProducts = function() {
+let _adminProdPage = 1;
+const ADMIN_PROD_PER_PAGE = 20;
+
+window.renderAdminProducts = function(resetPage = false) {
+  if (resetPage) _adminProdPage = 1;
   const q  = (document.getElementById('prod-search')?.value || '').toLowerCase();
   const cf = document.getElementById('prod-cat-filter')?.value || 'all';
   let prods = [...allProducts];
-  if (q) prods = prods.filter(p => (p.name||'').toLowerCase().includes(q) || (p.brand||'').toLowerCase().includes(q));
+  if (q) prods = prods.filter(p => (p.name||'').toLowerCase().includes(q) || (p.brand||'').toLowerCase().includes(p.brand||'').toLowerCase().includes(q));
   if (cf !== 'all') prods = prods.filter(p => p.category === cf);
   const grid = document.getElementById('admin-products-grid'); if (!grid) return;
   if (!prods.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔍</div><div class="empty-label">No products found</div></div>`; return;
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔍</div><div class="empty-label">No products found</div></div>`;
+    const pag = document.getElementById('admin-prod-pagination'); if (pag) pag.style.display = 'none';
+    return;
   }
-  grid.innerHTML = prods.map(p => {
+  // Paginate
+  const totalPages = Math.ceil(prods.length / ADMIN_PROD_PER_PAGE);
+  _adminProdPage = Math.min(_adminProdPage, totalPages);
+  const start = (_adminProdPage - 1) * ADMIN_PROD_PER_PAGE;
+  const pageProds = prods.slice(start, start + ADMIN_PROD_PER_PAGE);
+
+  // Render pagination controls
+  let pag = document.getElementById('admin-prod-pagination');
+  if (!pag) {
+    pag = document.createElement('div');
+    pag.id = 'admin-prod-pagination';
+    pag.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 0;margin-top:8px;font-size:13px;color:var(--silver)';
+    grid.parentNode.insertBefore(pag, grid.nextSibling);
+  }
+  if (totalPages > 1) {
+    pag.style.display = 'flex';
+    pag.innerHTML = `
+      <span>${prods.length} products · Page ${_adminProdPage} of ${totalPages}</span>
+      <div style="display:flex;gap:6px">
+        <button onclick="_adminProdGoTo(${_adminProdPage-1})" ${_adminProdPage===1?'disabled':''} style="background:var(--bg-3);border:1px solid var(--border);color:var(--silver);border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px">← Prev</button>
+        <button onclick="_adminProdGoTo(${_adminProdPage+1})" ${_adminProdPage===totalPages?'disabled':''} style="background:var(--bg-3);border:1px solid var(--border);color:var(--silver);border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px">Next →</button>
+      </div>`;
+  } else {
+    pag.style.display = 'none';
+  }
+
+  grid.innerHTML = pageProds.map(p => {
     const disc = p.originalPrice ? Math.round(((p.originalPrice-p.price)/p.originalPrice)*100) : 0;
     const stockCls  = p.stock===0?'no-stock':p.stock<=5?'low-stock':'in-stock';
     const stockText = p.stock===0?'Out of Stock':p.stock<=5?`Only ${p.stock} left`:`In Stock (${p.stock})`;
-    const imgSrc    = (p.images&&p.images.length>0&&p.images[0])?p.images[0]:(p.image||'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&q=60');
+    const rawImg = (p.images&&p.images.length>0&&p.images[0])?p.images[0]:(p.image||'');
+    // Compress Cloudinary images to 280px thumbnails for admin grid — huge speed boost
+    const imgSrc = rawImg && rawImg.includes('res.cloudinary.com')
+      ? rawImg.replace('/upload/', '/upload/f_auto,q_auto,w_280/')
+      : (rawImg || 'https://placehold.co/280x200/111/00ff88?text=No+Image');
     return `<div class="prod-admin-card">
       <img src="${imgSrc}" alt="${p.name}" class="prod-admin-img" loading="lazy"
-        onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&q=60'"
+        onerror="this.onerror=null;this.src='https://placehold.co/280x200/111/00ff88?text=No+Image'"
         onload="this.style.opacity='1'"/>
       <div class="prod-admin-body">
         <div class="prod-admin-cat">${p.brand||'—'} · ${p.category||'—'}</div>
@@ -430,6 +459,27 @@ window.renderAdminProducts = function() {
       </div>
     </div>`;
   }).join('');
+};
+
+// ── Debounced search — resets to page 1 on new query ────────────────────────
+let _adminSearchTimer = null;
+window.adminProductSearch = function() {
+  clearTimeout(_adminSearchTimer);
+  _adminSearchTimer = setTimeout(() => renderAdminProducts(true), 250);
+};
+
+// ── Admin product pagination nav ─────────────────────────────────────────────
+window._adminProdGoTo = function(page) {
+  const q   = (document.getElementById('prod-search')?.value || '').toLowerCase();
+  const cf  = document.getElementById('prod-cat-filter')?.value || 'all';
+  let prods = [...allProducts];
+  if (q)         prods = prods.filter(p => (p.name||'').toLowerCase().includes(q) || (p.brand||'').toLowerCase().includes(q));
+  if (cf!=='all') prods = prods.filter(p => p.category === cf);
+  const totalPages = Math.ceil(prods.length / ADMIN_PROD_PER_PAGE);
+  if (page < 1 || page > totalPages) return;
+  _adminProdPage = page;
+  renderAdminProducts();
+  document.getElementById('admin-products-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 // ============================================================
@@ -561,7 +611,7 @@ window.deleteProduct = async function(id) {
   try {
     await deleteDoc(doc(db, 'products', id));
     allProducts = allProducts.filter(x => x.id !== id);
-    renderAdminProducts(); renderDashboard();
+    renderAdminProducts(true); renderDashboard();
     showToast(`"${p.name}" deleted.`, 'error');
   } catch (err) { showToast('Failed to delete.', 'error'); console.error(err); }
 };
@@ -573,9 +623,8 @@ window.toggleProductStock = async function(id, currentStock) {
   if (!p) return;
 
   if (isOOS) {
-    // Currently OOS — prompt for restock quantity
     const qty = prompt(`Restock "${p.name}"\nEnter number of units available:`);
-    if (qty === null) return; // cancelled
+    if (qty === null) return;
     const num = parseInt(qty);
     if (isNaN(num) || num < 0) { showToast('Enter a valid number.', 'error'); return; }
     try {
@@ -585,7 +634,6 @@ window.toggleProductStock = async function(id, currentStock) {
       showToast(`"${p.name}" restocked to ${num} unit${num !== 1 ? 's' : ''} ✓`);
     } catch(e) { showToast('Update failed: ' + e.message, 'error'); }
   } else {
-    // Currently in stock — mark OOS instantly
     try {
       await updateDoc(doc(db, 'products', id), { stock: 0, updatedAt: serverTimestamp() });
       p.stock = 0;
