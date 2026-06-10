@@ -121,8 +121,8 @@
 
     /* ── PRODUCT GRID ── */
     .products-admin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
-    .prod-admin-card{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;transition:border-color .2s;}
-    .prod-admin-card:hover{border-color:rgba(0,255,136,.3);}
+    .prod-admin-card{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;transition:border-color .2s,transform .2s;}
+    .prod-admin-card:hover{border-color:rgba(0,255,136,.3);transform:translateY(-2px);}
     .prod-admin-img{aspect-ratio:1;width:100%;object-fit:cover;display:block;background:var(--bg-3);opacity:0;transition:opacity .3s;}
     .prod-admin-body{padding:12px;}
     .prod-admin-cat{font-family:var(--font-cond);font-size:9px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);margin-bottom:3px;}
@@ -315,6 +315,17 @@
         <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-val" id="d-delivered">0</div><div class="stat-label">Delivered</div></div>
         <div class="stat-card"><div class="stat-icon">👟</div><div class="stat-val" id="d-products">0</div><div class="stat-label">Products</div></div>
       </div>
+
+      <!-- ── COD Control Panel ───────────────────────────────────────────── -->
+      <div class="admin-table-wrap" style="margin-bottom:20px">
+        <div class="table-toolbar">
+          <span class="table-toolbar-title">💵 COD Settings</span>
+          <span style="font-size:11px;color:var(--silver)">Changes go live instantly for all customers</span>
+        </div>
+        <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px" id="cod-settings-panel">
+          <div style="font-size:12px;color:var(--silver);padding:8px 0">Loading COD settings…</div>
+        </div>
+      </div>
       <div class="admin-table-wrap">
         <div class="table-toolbar">
           <span class="table-toolbar-title">Recent Orders</span>
@@ -359,9 +370,9 @@
       </div>
       <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
         <div class="admin-search-wrap" style="flex:1;min-width:200px">
-          <input class="admin-search-input" type="text" id="prod-search" placeholder="Search products…" oninput="adminProductSearch()" style="width:100%"/>
+          <input class="admin-search-input" type="text" id="prod-search" placeholder="Search products…" oninput="renderAdminProducts()" style="width:100%"/>
         </div>
-        <select class="admin-filter-select" id="prod-cat-filter" onchange="renderAdminProducts(true)">
+        <select class="admin-filter-select" id="prod-cat-filter" onchange="renderAdminProducts()">
           <option value="all">All Categories</option>
           <option value="jerseys">Jerseys</option>
           <option value="studs">Studs / Boots</option>
