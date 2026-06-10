@@ -527,7 +527,6 @@ window.placeCodOrder = async function() {
 async function saveOrderToFirebase(screenshotUrl) {
   const btn      = document.getElementById('screenshot-upload-btn');
   const statusEl = document.getElementById('screenshot-status');
-  let savedToFirestore = false;
   try {
     const { db } = await import('./firebase.js');
     const { collection, addDoc, serverTimestamp } =
@@ -535,64 +534,24 @@ async function saveOrderToFirebase(screenshotUrl) {
     await addDoc(collection(db, 'orders'), {
       ..._pendingOrderData, screenshot: screenshotUrl, createdAt: serverTimestamp()
     });
-    savedToFirestore = true;
     console.log('[Checkout] Order saved to Firebase ✓');
-
-    // Auto-decrement product stock — non-blocking, runs after order confirms
-    decrementStock(_pendingOrderData.items, db).catch(e =>
-      console.warn('[Stock] Decrement failed (non-critical):', e.message)
-    );
   } catch (err) {
     console.warn('[Checkout] Firebase unavailable — saving to localStorage:', err.message);
     const orders = JSON.parse(localStorage.getItem('rn_orders') || '[]');
-    orders.unshift({ ..._pendingOrderData, screenshot: screenshotUrl, date: new Date().toISOString(), _localFallback: true });
+    orders.unshift({ ..._pendingOrderData, screenshot: screenshotUrl, date: new Date().toISOString() });
     localStorage.setItem('rn_orders', JSON.stringify(orders));
-    showToast('Order saved locally — check your internet connection.', 'error');
   }
 
   // Clear cart
   if (typeof clearCart === 'function') clearCart();
 
-  // Send email only after confirmed Firestore save
-  if (savedToFirestore) {
-    sendOrderEmails(_pendingOrderData).catch(e => console.warn('[EmailJS] Notification failed:', e));
-  }
+  // Send email notifications (non-blocking — don't fail order if email fails)
+  sendOrderEmails(_pendingOrderData).catch(e => console.warn('[EmailJS] Notification failed:', e));
 
   showSuccessScreen(_pendingOrderMeta);
   showToast('Order placed! ✓');
 }
 
-
-// ── Auto stock decrement ──────────────────────────────────────────────────────
-// Called after every confirmed Firestore order save.
-// Reduces stock of each ordered product by the quantity ordered.
-// If stock reaches 0, product automatically shows as Out of Stock on site.
-// Uses a transaction-like approach: reads current stock then writes new value.
-// Non-blocking — order success screen shows immediately while this runs.
-async function decrementStock(items, db) {
-  if (!items || !items.length) return;
-
-  const { doc, getDoc, updateDoc, serverTimestamp } =
-    await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-
-  for (const item of items) {
-    if (!item.id) continue;
-    try {
-      const ref      = doc(db, 'products', String(item.id));
-      const snap     = await getDoc(ref);
-      if (!snap.exists()) continue;
-
-      const current  = Number(snap.data().stock) || 0;
-      const ordered  = Number(item.qty) || 1;
-      const newStock = Math.max(0, current - ordered); // never go below 0
-
-      await updateDoc(ref, { stock: newStock, updatedAt: serverTimestamp() });
-      console.log(`[Stock] ${item.name}: ${current} → ${newStock}`);
-    } catch(e) {
-      console.warn(`[Stock] Failed for product ${item.id}:`, e.message);
-    }
-  }
-}
 
 // ── EmailJS notification ──────────────────────────────────────────────────────
 // Fires after every successful order save.
@@ -649,6 +608,77 @@ async function sendOrderEmails(d) {
     } catch (err) {
       console.warn('[EmailJS] Customer confirmation failed:', err);
     }
+  }
+}
+
+// ── COD availability — reads siteConfig/settings from Firestore ──────────────
+// Hides the COD payment card if:
+//   a) codEnabled is false (global off), OR
+//   b) ALL cart items are in codDisabledCats (per-category off)
+// Fails SAFE: if Firestore read fails, COD remains visible (never block by accident)
+async function loadCodAvailability() {
+  try {
+    const { db }     = await import('./firebase.js');
+    const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+
+    const snap = await getDoc(doc(db, 'siteConfig', 'settings'));
+    if (!snap.exists()) return; // no settings doc → COD enabled by default
+
+    const { codEnabled = true, codDisabledCats = [] } = snap.data();
+
+    // ── Check global toggle ───────────────────────────────────────────────
+    if (!codEnabled) {
+      hideCodOption('COD is currently unavailable. Please pay via UPI.');
+      return;
+    }
+
+    // ── Check per-category: is every item in cart from a disabled category?
+    if (codDisabledCats.length) {
+      const cart = (typeof getCart === 'function') ? getCart() : [];
+      const src  = window.PRODUCTS || [];
+
+      // COD blocked only if ALL items in cart are from disabled categories
+      const allBlocked = cart.length > 0 && cart.every(item => {
+        const p   = src.find(x => String(x.id) === String(item.id));
+        const cat = (p?.category || item.category || '').toLowerCase();
+        return codDisabledCats.includes(cat);
+      });
+
+      if (allBlocked) {
+        const blockedNames = codDisabledCats.map(c =>
+          c === 'jerseys' ? 'Jerseys' : c === 'studs' ? 'Studs & Boots' : 'Gear'
+        ).join(', ');
+        hideCodOption(`COD unavailable for ${blockedNames}. Please pay via UPI.`);
+        return;
+      }
+    }
+
+    // All checks passed — COD stays visible
+  } catch(e) {
+    console.warn('[Checkout] COD availability check failed (COD kept visible):', e.message);
+  }
+}
+
+function hideCodOption(reason) {
+  const codCard = document.querySelector('.payment-method-card[data-method="cod"]');
+  if (!codCard) return;
+
+  // Hide the card
+  codCard.style.display = 'none';
+
+  // If COD was selected, switch to UPI
+  if (selectedPaymentMethod === 'cod') {
+    selectPayment('upi');
+  }
+
+  // Show a small note so customers understand why COD isn't showing
+  const wrap = codCard.parentNode;
+  if (wrap && !document.getElementById('cod-unavailable-note')) {
+    const note = document.createElement('div');
+    note.id = 'cod-unavailable-note';
+    note.style.cssText = 'font-size:12px;color:var(--text-muted,#888);padding:6px 0;text-align:center';
+    note.textContent = reason;
+    wrap.appendChild(note);
   }
 }
 
@@ -726,6 +756,9 @@ document.head.appendChild(_spinStyle);
 // ── Init ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   renderSummary();
+
+  // Load COD availability from Firestore and update payment options
+  loadCodAvailability();
 
   document.getElementById('screenshot-file-input')?.addEventListener('change', function() {
     handleScreenshotChange(this);

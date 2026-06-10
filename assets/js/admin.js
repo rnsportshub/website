@@ -1,3 +1,10 @@
+// ============================================================
+// RN SPORTS HUB — Admin Panel v2 (PSJH Replica)
+// ============================================================
+// Sections: Login, Sidebar, Toast, Nav, Loaders, Dashboard,
+//           Orders, Products, Images, Save/Edit/Delete,
+//           Reviews, Bulk Upload, Coupons, Enquiries, Init
+
 import { db, auth } from './firebase.js';
 import { uploadMultipleToCloudinary } from './cloudinary.js';
 import {
@@ -383,60 +390,24 @@ window.deleteOrder = async function() {
 // ============================================================
 // SECTION 9: PRODUCTS
 // ============================================================
-let _adminProdPage = 1;
-const ADMIN_PROD_PER_PAGE = 20;
-
-window.renderAdminProducts = function(resetPage = false) {
-  if (resetPage) _adminProdPage = 1;
+window.renderAdminProducts = function() {
   const q  = (document.getElementById('prod-search')?.value || '').toLowerCase();
   const cf = document.getElementById('prod-cat-filter')?.value || 'all';
   let prods = [...allProducts];
-  if (q) prods = prods.filter(p => (p.name||'').toLowerCase().includes(q) || (p.brand||'').toLowerCase().includes(p.brand||'').toLowerCase().includes(q));
+  if (q) prods = prods.filter(p => (p.name||'').toLowerCase().includes(q) || (p.brand||'').toLowerCase().includes(q));
   if (cf !== 'all') prods = prods.filter(p => p.category === cf);
   const grid = document.getElementById('admin-products-grid'); if (!grid) return;
   if (!prods.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔍</div><div class="empty-label">No products found</div></div>`;
-    const pag = document.getElementById('admin-prod-pagination'); if (pag) pag.style.display = 'none';
-    return;
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔍</div><div class="empty-label">No products found</div></div>`; return;
   }
-  // Paginate
-  const totalPages = Math.ceil(prods.length / ADMIN_PROD_PER_PAGE);
-  _adminProdPage = Math.min(_adminProdPage, totalPages);
-  const start = (_adminProdPage - 1) * ADMIN_PROD_PER_PAGE;
-  const pageProds = prods.slice(start, start + ADMIN_PROD_PER_PAGE);
-
-  // Render pagination controls
-  let pag = document.getElementById('admin-prod-pagination');
-  if (!pag) {
-    pag = document.createElement('div');
-    pag.id = 'admin-prod-pagination';
-    pag.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 0;margin-top:8px;font-size:13px;color:var(--silver)';
-    grid.parentNode.insertBefore(pag, grid.nextSibling);
-  }
-  if (totalPages > 1) {
-    pag.style.display = 'flex';
-    pag.innerHTML = `
-      <span>${prods.length} products · Page ${_adminProdPage} of ${totalPages}</span>
-      <div style="display:flex;gap:6px">
-        <button onclick="_adminProdGoTo(${_adminProdPage-1})" ${_adminProdPage===1?'disabled':''} style="background:var(--bg-3);border:1px solid var(--border);color:var(--silver);border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px">← Prev</button>
-        <button onclick="_adminProdGoTo(${_adminProdPage+1})" ${_adminProdPage===totalPages?'disabled':''} style="background:var(--bg-3);border:1px solid var(--border);color:var(--silver);border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px">Next →</button>
-      </div>`;
-  } else {
-    pag.style.display = 'none';
-  }
-
-  grid.innerHTML = pageProds.map(p => {
+  grid.innerHTML = prods.map(p => {
     const disc = p.originalPrice ? Math.round(((p.originalPrice-p.price)/p.originalPrice)*100) : 0;
     const stockCls  = p.stock===0?'no-stock':p.stock<=5?'low-stock':'in-stock';
     const stockText = p.stock===0?'Out of Stock':p.stock<=5?`Only ${p.stock} left`:`In Stock (${p.stock})`;
-    const rawImg = (p.images&&p.images.length>0&&p.images[0])?p.images[0]:(p.image||'');
-    // Compress Cloudinary images to 280px thumbnails for admin grid — huge speed boost
-    const imgSrc = rawImg && rawImg.includes('res.cloudinary.com')
-      ? rawImg.replace('/upload/', '/upload/f_auto,q_auto,w_280/')
-      : (rawImg || 'https://placehold.co/280x200/111/00ff88?text=No+Image');
+    const imgSrc    = (p.images&&p.images.length>0&&p.images[0])?p.images[0]:(p.image||'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&q=60');
     return `<div class="prod-admin-card">
       <img src="${imgSrc}" alt="${p.name}" class="prod-admin-img" loading="lazy"
-        onerror="this.onerror=null;this.src='https://placehold.co/280x200/111/00ff88?text=No+Image'"
+        onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&q=60'"
         onload="this.style.opacity='1'"/>
       <div class="prod-admin-body">
         <div class="prod-admin-cat">${p.brand||'—'} · ${p.category||'—'}</div>
@@ -449,37 +420,11 @@ window.renderAdminProducts = function(resetPage = false) {
         <div class="${stockCls}" style="font-family:var(--font-cond);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">${stockText}</div>
         <div class="action-btns">
           <button class="action-btn" onclick="editProduct('${p.id}')" title="Edit">✏️</button>
-          <button class="action-btn" onclick="toggleProductStock('${p.id}',${p.stock})"
-            title="${p.stock===0?'Mark In Stock':'Mark Out of Stock'}"
-            style="background:${p.stock===0?'rgba(0,255,136,.12)':'rgba(255,100,100,.12)'};color:${p.stock===0?'var(--accent)':'#ff6464'}">
-            ${p.stock===0?'✓ Restock':'⊘ OOS'}
-          </button>
           <button class="action-btn del" onclick="deleteProduct('${p.id}')" title="Delete">🗑</button>
         </div>
       </div>
     </div>`;
   }).join('');
-};
-
-// ── Debounced search — resets to page 1 on new query ────────────────────────
-let _adminSearchTimer = null;
-window.adminProductSearch = function() {
-  clearTimeout(_adminSearchTimer);
-  _adminSearchTimer = setTimeout(() => renderAdminProducts(true), 250);
-};
-
-// ── Admin product pagination nav ─────────────────────────────────────────────
-window._adminProdGoTo = function(page) {
-  const q   = (document.getElementById('prod-search')?.value || '').toLowerCase();
-  const cf  = document.getElementById('prod-cat-filter')?.value || 'all';
-  let prods = [...allProducts];
-  if (q)         prods = prods.filter(p => (p.name||'').toLowerCase().includes(q) || (p.brand||'').toLowerCase().includes(q));
-  if (cf!=='all') prods = prods.filter(p => p.category === cf);
-  const totalPages = Math.ceil(prods.length / ADMIN_PROD_PER_PAGE);
-  if (page < 1 || page > totalPages) return;
-  _adminProdPage = page;
-  renderAdminProducts();
-  document.getElementById('admin-products-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 // ============================================================
@@ -611,36 +556,9 @@ window.deleteProduct = async function(id) {
   try {
     await deleteDoc(doc(db, 'products', id));
     allProducts = allProducts.filter(x => x.id !== id);
-    renderAdminProducts(true); renderDashboard();
+    renderAdminProducts(); renderDashboard();
     showToast(`"${p.name}" deleted.`, 'error');
   } catch (err) { showToast('Failed to delete.', 'error'); console.error(err); }
-};
-
-// ── Quick stock toggle — one click to mark OOS or restock ────────────────────
-window.toggleProductStock = async function(id, currentStock) {
-  const isOOS = currentStock === 0;
-  const p     = allProducts.find(x => x.id === id);
-  if (!p) return;
-
-  if (isOOS) {
-    const qty = prompt(`Restock "${p.name}"\nEnter number of units available:`);
-    if (qty === null) return;
-    const num = parseInt(qty);
-    if (isNaN(num) || num < 0) { showToast('Enter a valid number.', 'error'); return; }
-    try {
-      await updateDoc(doc(db, 'products', id), { stock: num, updatedAt: serverTimestamp() });
-      p.stock = num;
-      renderAdminProducts(); renderDashboard();
-      showToast(`"${p.name}" restocked to ${num} unit${num !== 1 ? 's' : ''} ✓`);
-    } catch(e) { showToast('Update failed: ' + e.message, 'error'); }
-  } else {
-    try {
-      await updateDoc(doc(db, 'products', id), { stock: 0, updatedAt: serverTimestamp() });
-      p.stock = 0;
-      renderAdminProducts(); renderDashboard();
-      showToast(`"${p.name}" marked out of stock ✓`);
-    } catch(e) { showToast('Update failed: ' + e.message, 'error'); }
-  }
 };
 
 window.resetProductForm = function() {
@@ -1466,6 +1384,124 @@ window.runBulkImport = async function() {
   showToast(`${imported} product${imported !== 1 ? 's' : ''} imported ✓`);
 };
 
+// ============================================================
+// SECTION: COD SETTINGS
+// Stored in Firestore: siteConfig/settings
+// Fields:
+//   codEnabled:      bool  — global COD on/off
+//   codDisabledCats: array — categories where COD is disabled
+//                            e.g. ['studs'] disables COD for shoes only
+// ============================================================
+
+let _codSettings = {
+  codEnabled:      true,
+  codDisabledCats: []
+};
+
+const COD_CATEGORIES = [
+  { value: 'jerseys', label: '👕 Jerseys' },
+  { value: 'studs',   label: '👟 Studs & Boots' },
+  { value: 'gear',    label: '⚽ Gear & Accessories' },
+];
+
+async function loadCodSettings() {
+  try {
+    const snap = await getDoc(doc(db, 'siteConfig', 'settings'));
+    if (snap.exists()) {
+      const data = snap.data();
+      _codSettings.codEnabled      = data.codEnabled !== false;
+      _codSettings.codDisabledCats = Array.isArray(data.codDisabledCats) ? data.codDisabledCats : [];
+    }
+  } catch(e) { console.warn('[Admin] Could not load COD settings:', e.message); }
+  renderCodSettingsPanel();
+}
+
+function renderCodSettingsPanel() {
+  const panel = document.getElementById('cod-settings-panel');
+  if (!panel) return;
+  const { codEnabled, codDisabledCats } = _codSettings;
+  const globalOff = !codEnabled;
+
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--bg-3);border-radius:var(--radius);border:1px solid ${globalOff ? 'rgba(255,100,100,.3)' : 'rgba(0,255,136,.2)'}">
+      <div>
+        <div style="font-weight:700;font-size:14px;font-family:var(--font-cond)">Cash on Delivery — Global</div>
+        <div style="font-size:12px;color:var(--silver);margin-top:2px">
+          ${globalOff
+            ? '⛔ COD is <strong style="color:#ff6464">DISABLED</strong> for all products'
+            : '✅ COD is <strong style="color:var(--accent)">ENABLED</strong> for all products'}
+        </div>
+      </div>
+      <button onclick="toggleGlobalCod()" style="
+        padding:8px 18px;border-radius:20px;border:none;cursor:pointer;
+        font-family:var(--font-cond);font-weight:700;font-size:13px;letter-spacing:.05em;
+        background:${globalOff ? 'rgba(0,255,136,.15)' : 'rgba(255,100,100,.15)'};
+        color:${globalOff ? 'var(--accent)' : '#ff6464'};
+        border:1px solid ${globalOff ? 'rgba(0,255,136,.3)' : 'rgba(255,100,100,.3)'}">
+        ${globalOff ? '▶ Enable COD' : '⏸ Disable COD'}
+      </button>
+    </div>
+    <div style="margin-top:4px">
+      <div style="font-size:11px;color:var(--silver);margin-bottom:8px;letter-spacing:.06em;text-transform:uppercase;font-family:var(--font-cond)">
+        Disable COD for specific categories ${globalOff ? '(overridden — global COD is off)' : ''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${COD_CATEGORIES.map(cat => {
+          const isDisabled = codDisabledCats.includes(cat.value);
+          return `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-2);border-radius:var(--radius);border:1px solid ${isDisabled ? 'rgba(255,100,100,.25)' : 'var(--border)'}">
+            <div>
+              <span style="font-size:13px;font-weight:600">${cat.label}</span>
+              <span style="font-size:11px;color:var(--silver);margin-left:8px">
+                ${isDisabled ? '⛔ COD disabled' : '✅ COD available'}
+              </span>
+            </div>
+            <button onclick="toggleCatCod('${cat.value}')" style="
+              padding:5px 14px;border-radius:16px;border:none;cursor:pointer;
+              font-size:11px;font-weight:700;font-family:var(--font-cond);
+              background:${isDisabled ? 'rgba(0,255,136,.12)' : 'rgba(255,100,100,.12)'};
+              color:${isDisabled ? 'var(--accent)' : '#ff6464'};
+              border:1px solid ${isDisabled ? 'rgba(0,255,136,.25)' : 'rgba(255,100,100,.25)'}">
+              ${isDisabled ? 'Enable' : 'Disable'}
+            </button>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+window.toggleGlobalCod = async function() {
+  const newVal = !_codSettings.codEnabled;
+  try {
+    await setDoc(doc(db, 'siteConfig', 'settings'), {
+      codEnabled:      newVal,
+      codDisabledCats: _codSettings.codDisabledCats,
+      updatedAt:       serverTimestamp()
+    }, { merge: true });
+    _codSettings.codEnabled = newVal;
+    renderCodSettingsPanel();
+    showToast(`COD ${newVal ? 'enabled' : 'disabled'} globally ✓`);
+  } catch(e) { showToast('Failed to update COD setting: ' + e.message, 'error'); }
+};
+
+window.toggleCatCod = async function(category) {
+  const cats     = [..._codSettings.codDisabledCats];
+  const idx      = cats.indexOf(category);
+  const isAdding = idx === -1;
+  if (isAdding) cats.push(category); else cats.splice(idx, 1);
+  try {
+    await setDoc(doc(db, 'siteConfig', 'settings'), {
+      codEnabled:      _codSettings.codEnabled,
+      codDisabledCats: cats,
+      updatedAt:       serverTimestamp()
+    }, { merge: true });
+    _codSettings.codDisabledCats = cats;
+    renderCodSettingsPanel();
+    const catLabel = COD_CATEGORIES.find(c => c.value === category)?.label || category;
+    showToast(`COD ${isAdding ? 'disabled' : 'enabled'} for ${catLabel} ✓`);
+  } catch(e) { showToast('Failed to update: ' + e.message, 'error'); }
+};
+
 // SECTION 17: INIT
 // ============================================================
 function initModalBackdrop() {
@@ -1474,7 +1510,7 @@ function initModalBackdrop() {
 
 async function initAdminApp() {
   console.log('[Admin] Initialising RN Sports Hub admin…');
-  await Promise.all([loadProducts(), loadOrders(), loadCoupons(), loadEnquiries()]);
+  await Promise.all([loadProducts(), loadOrders(), loadCoupons(), loadEnquiries(), loadCodSettings()]);
   renderDashboard();
   initModalBackdrop();
   initMobileSidebar();
