@@ -1,9 +1,4 @@
-// ============================================================
-// RN SPORTS HUB — Admin Panel v2 (PSJH Replica)
-// ============================================================
-// Sections: Login, Sidebar, Toast, Nav, Loaders, Dashboard,
-//           Orders, Products, Images, Save/Edit/Delete,
-//           Reviews, Bulk Upload, Coupons, Enquiries, Init
+
 
 import { db, auth } from './firebase.js';
 import { uploadMultipleToCloudinary } from './cloudinary.js';
@@ -15,13 +10,6 @@ import {
   signInWithEmailAndPassword, signOut, onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
-// ============================================================
-// SECTION 1: AUTH — Firebase Authentication
-// ============================================================
-// Admin logs in with email + password via Firebase Auth.
-// No credentials are stored in client-side JS.
-// Firestore rules enforce auth on all write operations.
-// ============================================================
 
 const LOCKOUT_KEY      = 'rn_admin_lockout';
 const ATTEMPT_KEY      = 'rn_admin_attempts';
@@ -468,7 +456,7 @@ window.renderAdminProducts = function(resetPage = false) {
   const q  = (document.getElementById('prod-search')?.value || '').toLowerCase();
   const cf = document.getElementById('prod-cat-filter')?.value || 'all';
   let prods = [...allProducts];
-  if (q) prods = prods.filter(p => (p.name||'').toLowerCase().includes(q) || (p.brand||'').toLowerCase().includes(p.brand||'').toLowerCase().includes(q));
+  if (q) prods = prods.filter(p => (p.name||'').toLowerCase().includes(q) || (p.brand||'').toLowerCase().includes(q));
   if (cf !== 'all') prods = prods.filter(p => p.category === cf);
   const grid = document.getElementById('admin-products-grid'); if (!grid) return;
   if (!prods.length) {
